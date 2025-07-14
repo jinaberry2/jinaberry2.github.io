@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 보관함</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <script src="auth.js"></script>
+    <header>
+        <h1>보관함</h1>
+        <div class="tabs">
+            <a href="#" class="tab-btn" data-tab="recent">최근</a>
+            <a href="#" class="tab-btn active" data-tab="purchased">구매</a>
+            <a href="#" class="tab-btn" data-tab="liked">좋아요</a>
+            <a href="#" class="tab-btn" data-tab="deleted">삭제된 글</a>
+        </div>
+        <div class="search-box">
+            <input type="text" id="search-input" placeholder="포스트 제목, 닉네임 검색">
+        </div>
+        <div class="sort-bar">
+            <p id="post-count"></p>
+            <div class="sort-actions">
+                <button id="select-btn" class="select-btn" style="display: none;">선택</button>
+                <div class="sort-options">
+                    <button id="sort-btn">
+                        <span id="sort-text">최신순</span>
+                        <span class="sort-arrow">▲</span>
+                    </button>
+                    <div id="sort-menu" class="sort-menu">
+                        <button class="sort-option" data-sort="newest">최신순</button>
+                        <button class="sort-option" data-sort="oldest">오래된순</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main id="post-list-container">
+    </main>
+    
+    <!-- '+' 버튼의 href 속성을 제거하여 JavaScript로 제어하도록 변경 -->
+    <a href="#" id="add-post-btn">+</a>
+
+    <div id="bulk-delete-bar" class="bulk-delete-bar" style="display: none;">
+        <button id="bulk-delete-btn" class="bulk-delete-btn">일괄 삭제 (0)</button>
+    </div>
+
+    <!-- ✅ 새롭게 추가된 비밀번호 입력 모달 -->
+    <div id="password-modal-overlay" class="password-modal-overlay">
+        <div class="password-modal-container">
+            <button id="close-modal-btn" class="close-modal-btn">&times;</button>
+            <!-- ✅ 모달 제목에 줄 바꿈 추가 -->
+            <h1>글 작성을 위해<br>비밀번호를 입력하세요</h1>
+            <input type="password" id="modal-password-input" class="password-input" placeholder="비밀번호">
+            <button id="modal-login-btn" class="login-btn">확인</button>
+            <p id="modal-error-message" class="error-message">비밀번호가 올바르지 않습니다.</p>
+        </div>
+    </div>
+
+    <script src="storage.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>

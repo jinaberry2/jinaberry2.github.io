@@ -1,0 +1,306 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    margin: 0;
+    background-color: #f0f2f5;
+}
+header {
+    background-color: white; padding: 1rem; border-bottom: 1px solid #ddd;
+    position: sticky; top: 0; z-index: 10;
+}
+h1 { text-align: center; margin: 0 0 1rem 0; }
+.tabs { display: flex; justify-content: space-around; margin-bottom: 1rem; }
+.tabs a { text-decoration: none; color: #888; padding: 0.5rem; }
+.tabs a.active { color: black; border-bottom: 2px solid black; font-weight: bold; }
+
+.search-box {
+    position: relative;
+    padding: 0 1rem;
+}
+.search-box::before {
+    content: '🔍';
+    position: absolute;
+    left: 2rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #aaa;
+}
+#search-input {
+    width: 100%;
+    padding: 0.8rem 1rem 0.8rem 2.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+/* ✅ 정렬 바 스타일 */
+.sort-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    /* ✅ 좌우 패딩을 늘려 간격 조정 */
+    padding: 0 1.5rem;
+    margin-top: 1rem;
+}
+#post-count {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #888;
+}
+.sort-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+/* ✅ 선택 버튼 스타일 */
+.select-btn {
+    background: none;
+    border: none;
+    font-size: 0.9rem;
+    color: #888;
+    cursor: pointer;
+    padding: 0.25rem 0.75rem;
+}
+.select-btn:hover {
+    color: #212529;
+}
+
+.sort-options {
+    position: relative;
+}
+#sort-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background: none;
+    border: none;
+    padding: 0.25rem 0.75rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #888;
+}
+.sort-arrow {
+    transition: transform 0.2s;
+}
+.sort-options.active .sort-arrow {
+    transform: rotate(180deg);
+}
+.sort-menu {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    z-index: 10;
+    display: none;
+    flex-direction: column;
+}
+.sort-options.active .sort-menu {
+    display: flex;
+}
+.sort-option {
+    background: none;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    text-align: left;
+    cursor: pointer;
+    white-space: nowrap;
+    font-size: 0.9rem;
+    color: #888;
+}
+.sort-option:hover {
+    background-color: #f0f2f5;
+}
+
+.post-item-link { text-decoration: none; color: inherit; }
+.post-item {
+    background-color: white;
+    margin: 1rem;
+    padding: 1rem; /* 기존 패딩 유지 */
+    /* padding-top: 1.5rem; 제거: .post-info 내부 정렬로 대체 */
+    border-radius: 8px;
+    display: flex;
+    gap: 1rem;
+    cursor: pointer;
+    position: relative;
+    transition: background-color 0.2s;
+}
+.post-item:hover { background-color: #f9f9f9; }
+.thumbnail-container {
+    width: 100px;
+    height: 75px;
+    flex-shrink: 0;
+    background-color: #eee;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.thumbnail { width: 100%; height: 100%; object-fit: cover; }
+.post-info {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* 텍스트 전체를 세로 중앙 정렬 */
+}
+
+.post-info h3 {
+    margin: 0 0 0.7rem 0;
+    font-size: 1rem;
+    padding: 0;
+    text-align: left;
+    letter-spacing: -0.02rem; /* ✅ 살짝 좁혀서 들뜬 느낌 줄이기 */
+    margin-left: -0.05rem;
+}
+
+
+.post-info p {
+    margin: 0;
+    font-size: 0.8rem;
+    color: #555;
+    padding: 0; /* 패딩 제거 */
+    text-align: left;
+    
+}
+
+.tag {
+    display: inline-block; background-color: #ffc107; color: white;
+    padding: 2px 6px; font-size: 0.7rem; border-radius: 4px; margin-top: 0.5rem;
+}
+/* ✅ 체크박스 컨테이너 */
+.checkbox-container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-right: 1rem;
+    flex-shrink: 0;
+}
+.post-checkbox {
+    width: 20px;
+    height: 20px;
+}
+
+#add-post-btn {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background-color: black;
+    color: white;
+    font-size: 2.5rem;
+    text-align: center;
+    text-decoration: none;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1; /* ✅ 이게 핵심이에요! */
+    font-family: 'Arial', sans-serif; /* 혹은 'Inter', 'Noto Sans' 같은 정렬 잘 되는 폰트 */
+}
+
+
+/* ✅ 일괄 삭제 바 스타일 */
+.bulk-delete-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background-color: white;
+    border-top: 1px solid #ddd;
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    box-shadow: 0 -4px 8px rgba(0,0,0,0.1);
+    z-index: 10;
+}
+.bulk-delete-btn {
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+    font-weight: bold;
+    background-color: #ff3b30;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* ✅ 비밀번호 모달 스타일 (index.html의 스타일 재활용) */
+.password-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* 다른 요소 위에 표시 */
+    visibility: hidden; /* 기본적으로 숨김 */
+    opacity: 0; /* 기본적으로 투명 */
+    transition: visibility 0s, opacity 0.3s ease; /* 부드러운 전환 효과 */
+}
+
+.password-modal-overlay.visible {
+    visibility: visible;
+    opacity: 1;
+}
+
+.password-modal-container {
+    background-color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    width: 300px;
+    position: relative; /* 닫기 버튼 위치 지정을 위해 추가 */
+}
+
+/* ✅ 모달 내 h1 폰트 사이즈 및 하단 간격 조정 */
+.password-modal-container h1 {
+    margin-top: 0;
+    font-size: 1.2rem;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+}
+
+/* 기존 .password-input, .login-btn, .error-message 스타일은 그대로 사용 */
+.password-input {
+    width: 100%;
+    padding: 0.75rem;
+    margin: 1rem 0;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-sizing: border-box;
+    font-size: 1rem;
+}
+.login-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: black;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    cursor: pointer;
+}
+.error-message {
+    color: #ff3b30;
+    font-size: 0.9rem;
+    margin-top: 1rem;
+    visibility: hidden;
+}
+
+.close-modal-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #888;
+}

@@ -1,0 +1,6 @@
+
+[build]
+  # 웹사이트로 보여줄 폴더 (모든 html, css, js 파일이 있는 곳)
+  publish = "."
+  # '안전한 중계인' 코드가 있는 폴더
+  functions = "netlify/functions"

@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>새 글 작성</title>
+    <link rel="stylesheet" href="write.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <header class="write-header">
+        <a href="javascript:history.back()" class="header-back-btn">←</a>
+        <div class="header-right">
+            <span id="word-count" class="word-count">0자</span>
+            <div class="header-buttons">
+                
+                <button id="publish-btn" class="publish-btn">발행</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="write-container">
+        <div class="editor-toolbar">
+            <div class="toolbar-left">
+                <button type="button" class="toolbar-button" data-command="undo" title="되돌리기">
+                    <i class="fas fa-undo-alt"></i>
+                </button>
+                <button type="button" class="toolbar-button" data-command="redo" title="다시 실행">
+                    <i class="fas fa-redo-alt"></i>
+                </button>
+                <span class="toolbar-separator"></span>
+
+            </div>
+            <div class="toolbar-center">
+                <button type="button" class="toolbar-button" data-command="bold" title="굵게">
+                    <b>B</b>
+                </button>
+                <button type="button" class="toolbar-button" data-command="italic" title="기울임꼴">
+                    <i>I</i>
+                </button>
+                <button type="button" class="toolbar-button" data-command="underline" title="밑줄">
+                    <u>U</u>
+                </button>
+                <button type="button" class="toolbar-button" data-command="strikeThrough" title="취소선">
+                    S
+                </button>
+                <span class="toolbar-separator"></span>
+                <button type="button" class="toolbar-button" data-command="createLink" title="링크 삽입">
+                    🔗
+                </button>
+                <button type="button" class="toolbar-button" id="insertImageBtn" title="이미지 추가">
+                    img
+                </button>
+                <span class="toolbar-separator"></span>
+
+                <button type="button" class="toolbar-button" data-command="insertUnorderedList" title="글머리 기호">
+                    •
+                </button>
+                <button type="button" class="toolbar-button" data-command="insertOrderedList" title="번호 매기기">
+                    1.2.3
+                </button>
+                <button type="button" class="toolbar-button" data-command="insertHorizontalRule" title="구분선 추가">
+                    —
+                </button>
+            </div>
+            <div class="toolbar-right">
+              <span class="toolbar-separator"></span>
+                <button type="button" class="toolbar-button" data-command="justifyLeft" title="왼쪽 정렬">
+                    ◧
+                </button>
+                <button type="button" class="toolbar-button" data-command="justifyCenter" title="가운데 정렬">
+                    ◪
+                </button>
+                <button type="button" class="toolbar-button" data-command="justifyRight" title="오른쪽 정렬">
+                    ◨
+                </button>
+            </div>
+        </div>
+
+        <form id="write-form">
+            <div class="title-container">
+                <input type="text" id="post-title" class="title-input" placeholder="제목을 입력하세요.">
+                <input type="text" id="post-author" class="author-input" placeholder="작가명을 입력하세요.">
+            </div>
+
+            <div id="post-content" class="editable-area" contenteditable="true" placeholder="글 내용을 입력하세요."></div>
+
+            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+        </form>
+    </main>
+    <script src="write.js"></script>
+</body>
+</html>
