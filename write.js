@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (response.ok) {
                 alert(message);
-                window.location.href = `post.html?id=${isEditMode ? editId : newPostData.id}`;
+                window.location.href = `archive.html?tab=recent`;
             } else {
                 const error = await response.json();
                 alert(`작업 실패: ${error.message}`);
