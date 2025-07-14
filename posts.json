@@ -122,8 +122,9 @@
     "timestamp": 1752535092718,
     "thumbnail": null,
     "id": 1752535093250,
-    "liked": false,
-    "views": 1
+    "liked": true,
+    "views": 1,
+    "likedTimestamp": 1752536483135
   },
   {
     "title": "안녕하시긔",
