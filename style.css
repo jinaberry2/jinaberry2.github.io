@@ -307,6 +307,6 @@ h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
     color: #888;
 }
 
-#post-list-container {
-    padding-top: 7rem; /* ✅ 이 값을 늘리면 로딩 메시지 위치가 더 아래로 내려갑니다. */
+.loading-message {
+    margin-top: 5rem; /* ✅ 이 값을 늘리면 로딩 메시지가 더 아래로 이동합니다. */
 }
