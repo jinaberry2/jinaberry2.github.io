@@ -293,6 +293,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
     font-size: 0.9rem;
     margin-top: 2rem;
     visibility: hidden;
+    margin-bottom: -2rem;
 }
 
 .close-modal-btn {
