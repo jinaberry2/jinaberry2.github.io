@@ -1,4 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    const params = new URLSearchParams(window.location.search);
+ const sourceTab = params.get('tab');
     const publishBtn = document.getElementById('publish-btn');
     const postTitleInput = document.getElementById('post-title');
     const postAuthorInput = document.getElementById('post-author');
@@ -7,8 +9,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const insertImageBtn = document.getElementById('insertImageBtn');
     const toolbarButtons = document.querySelectorAll('.editor-toolbar button');
     const wordCountSpan = document.getElementById('word-count');
-
-    const params = new URLSearchParams(window.location.search);
     const editId = params.get('editId');
     let isEditMode = !!editId;
     let originalPost = null;
@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (response.ok) {
                 alert(message);
-                window.location.href = `archive.html?tab=recent`;
+                window.location.href = `archive.html?tab=${sourceTab || 'recent'}`;
             } else {
                 const error = await response.json();
                 alert(`작업 실패: ${error.message}`);
