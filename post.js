@@ -177,6 +177,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const optionsMenu = document.getElementById('options-menu');
         const deletePostBtn = document.getElementById('delete-post-btn');
         const permanentDeleteBtn = document.getElementById('permanent-delete-btn');
+        const editPostBtn = document.getElementById('edit-post-btn'); // 수정 버튼 추가
+
+        // 수정 버튼 이벤트 리스너 추가
+        editPostBtn.addEventListener('click', () => {
+            window.location.href = `write.html?editId=${post.id}`;
+        });
 
         likeBtn.classList.toggle('active', post.liked);
         likeIcon.textContent = '♡';
