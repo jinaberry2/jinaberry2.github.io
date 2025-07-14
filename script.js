@@ -1,161 +1,497 @@
-// DOMContentLoaded 이벤트 리스너: 문서가 완전히 로드되고 파싱된 후 실행됩니다.
-document.addEventListener('DOMContentLoaded', async () => {
-    // 탭 클릭 이벤트 리스너를 설정합니다.
-    setupTabListeners();
+// script.js
+document.addEventListener('DOMContentLoaded', () => {
+    let currentTab = 'purchased';
+    let searchTerm = '';
+    let allPosts = [];
+    let recentViews = [];
+    let currentSort = 'newest';
+    let isSelectionMode = false;
+    let selectedPostIds = [];
+    let isLoadingPosts = true;
 
-    // 로컬 스토리지에서 마지막으로 활성화된 탭을 가져옵니다.
-    // 저장된 탭이 없으면 'purchase' 탭을 기본값으로 설정합니다.
-    const lastActiveTab = localStorage.getItem('activeTab');
-    showTab(lastActiveTab || 'purchase');
+    // ✅ Pagination variables
+    const POSTS_PER_PAGE = 10;
+    let currentPage = 1;
+    let totalPages = 1;
+    const PAGES_PER_BLOCK = 5;
 
-    // 초기 포스트 로드 (모든 포스트, 인기 포스트 등)
-    await loadAllPosts();
-    await loadPopularPosts(); // 인기 포스트 로드 함수가 있다면 호출
-});
+    const postListContainer = document.getElementById('post-list-container');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const searchInput = document.getElementById('search-input');
+    const postCountElement = document.getElementById('post-count');
+    const sortOptionsContainer = document.querySelector('.sort-options');
+    const sortButton = document.getElementById('sort-btn');
+    const sortText = document.getElementById('sort-text');
+    const sortMenu = document.getElementById('sort-menu');
+    const selectBtn = document.getElementById('select-btn');
+    const addPostBtn = document.getElementById('add-post-btn');
+    const bulkDeleteBar = document.getElementById('bulk-delete-bar');
+    const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    // ✅ Pagination container
+    const paginationContainer = document.getElementById('pagination-container');
 
-/**
- * 탭 클릭 이벤트 리스너를 설정합니다.
- */
-function setupTabListeners() {
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.addEventListener('click', (event) => {
-            const tabName = event.target.dataset.tab;
-            showTab(tabName);
+
+    // ✅ 비밀번호 모달 관련 요소들
+    const passwordModalOverlay = document.getElementById('password-modal-overlay');
+    const modalPasswordInput = document.getElementById('modal-password-input');
+    const modalLoginBtn = document.getElementById('modal-login-btn');
+    const modalErrorMessage = document.getElementById('modal-error-message');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+
+    // ✅ 여기에 원하는 비밀번호를 설정하세요. 
+    const CORRECT_PASSWORD = '0506';
+
+    // Custom alert function (Tailwind CSS 클래스 제거 및 기본 스타일 적용)
+    function showCustomAlert(message) {
+        return new Promise(resolve => { // Promise 반환하도록 수정
+            const alertBox = document.createElement('div');
+            alertBox.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                display: flex; align-items: center; justify-content: center;
+                background-color: rgba(0, 0, 0, 0.5); z-index: 5000;
+            `;
+            alertBox.innerHTML = `
+                <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 300px; width: 90%;">
+                    <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 15px;">${message}</p>
+                    <button id="custom-alert-ok-btn" style="background-color: #007bff; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">확인</button>
+                </div>
+            `;
+            document.body.appendChild(alertBox);
+
+            document.getElementById('custom-alert-ok-btn').onclick = () => {
+                document.body.removeChild(alertBox);
+                resolve(); // 확인 버튼 클릭 시 Promise 해결
+            };
         });
-    });
-}
-
-/**
- * 지정된 탭을 활성화하고 내용을 표시합니다.
- * @param {string} tabName - 활성화할 탭의 이름 (예: 'all', 'recent', 'popular', 'purchase')
- */
-async function showTab(tabName) {
-    // 모든 탭 내용을 숨깁니다.
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
-
-    // 모든 탭 버튼의 'active' 클래스를 제거합니다.
-    document.querySelectorAll('.tab-button').forEach(button => {
-        button.classList.remove('active');
-    });
-
-    // 선택된 탭 내용과 버튼을 활성화합니다.
-    document.getElementById(`${tabName}-content`).classList.add('active');
-    document.querySelector(`.tab-button[data-tab="${tabName}"]`).classList.add('active');
-
-    // 로컬 스토리지에 현재 활성화된 탭을 저장합니다.
-    localStorage.setItem('activeTab', tabName);
-
-    // 'recent' 탭이 활성화될 때마다 최근 포스트를 다시 로드합니다.
-    if (tabName === 'recent') {
-        await loadRecentPosts();
     }
-    // 다른 탭에 대한 특정 로드 로직이 있다면 여기에 추가합니다.
-    // 예: if (tabName === 'popular') { await loadPopularPosts(); }
-}
 
-/**
- * 모든 포스트를 가져와서 'all' 탭에 표시합니다.
- */
-async function loadAllPosts() {
-    try {
-        const response = await fetch('/.netlify/functions/get-posts');
-        const posts = await response.json();
-        displayPosts(posts, 'all-posts-list');
-    } catch (error) {
-        console.error('모든 포스트를 불러오는 중 오류 발생:', error);
-        document.getElementById('all-posts-list').innerHTML = '<p>포스트를 불러올 수 없습니다.</p>';
+    // Custom confirmation function (Tailwind CSS 클래스 제거 및 기본 스타일 적용)
+    function showCustomConfirm(message) {
+        return new Promise(resolve => {
+            const confirmBox = document.createElement('div');
+            confirmBox.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                display: flex; align-items: center; justify-content: center;
+                background-color: rgba(0, 0, 0, 0.5); z-index: 5000;
+            `;
+            confirmBox.innerHTML = `
+                <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 300px; width: 90%;">
+                    <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 15px;">${message}</p>
+                    <div style="display: flex; justify-content: space-around; gap: 10px;">
+                        <button id="custom-confirm-cancel-btn" style="background-color: #6c757d; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">취소</button>
+                        <button id="custom-confirm-ok-btn" style="background-color: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">삭제</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmBox);
+
+            document.getElementById('custom-confirm-ok-btn').onclick = () => {
+                document.body.removeChild(confirmBox);
+                resolve(true);
+            };
+            document.getElementById('custom-confirm-cancel-btn').onclick = () => {
+                document.body.removeChild(confirmBox);
+                resolve(false);
+            };
+        });
     }
-}
 
-/**
- * 최근 조회된 포스트를 가져와서 'recent' 탭에 표시합니다.
- * 조회 시간에 따라 최신순으로 정렬됩니다.
- */
-async function loadRecentPosts() {
-    try {
-        // 1. 최근 조회 기록을 가져옵니다.
-        const recentViewsResponse = await fetch('/.netlify/functions/get-recent-views');
-        const recentViews = await recentViewsResponse.json();
+    function toggleSelectionMode() {
+        isSelectionMode = !isSelectionMode;
+        selectedPostIds = [];
+        if (isSelectionMode) {
+            selectBtn.textContent = '취소';
+            addPostBtn.style.display = 'none';
+            bulkDeleteBar.style.display = 'flex';
+        } else {
+            selectBtn.textContent = '선택';
+            addPostBtn.style.display = 'flex';
+            bulkDeleteBar.style.display = 'none';
+        }
+        updateBulkDeleteBtn();
+        renderPosts();
+    }
 
-        // 2. 모든 포스트 데이터를 가져옵니다.
-        const allPostsResponse = await fetch('/.netlify/functions/get-posts');
-        const allPosts = await allPostsResponse.json();
+    function updateBulkDeleteBtn() {
+        bulkDeleteBtn.textContent = `일괄 삭제 (${selectedPostIds.length})`;
+        bulkDeleteBtn.disabled = selectedPostIds.length === 0;
+    }
 
-        // 3. recentViews를 postId를 키로 하는 맵으로 변환하여 조회 시간을 쉽게 찾을 수 있도록 합니다.
-        const recentViewsMap = new Map();
-        recentViews.forEach(view => {
-            // 같은 postId가 여러 번 조회될 경우, 가장 최근의 timestamp를 사용합니다.
-            if (!recentViewsMap.has(view.postId) || new Date(view.timestamp) > new Date(recentViewsMap.get(view.postId).timestamp)) {
-                recentViewsMap.set(view.postId, view);
+    async function permanentDeleteSelectedPosts() {
+        const confirmDelete = await showCustomConfirm(
+            `${selectedPostIds.length}개의 글을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+        );
+
+        if (!confirmDelete) return;
+
+        let deletedCount = 0;
+        for (const postId of selectedPostIds) {
+            try {
+                const response = await fetch('/.netlify/functions/delete-post', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ postId: postId })
+                });
+
+                if (response.ok) {
+                    deletedCount++;
+                } else {
+                    console.error(`Post ${postId} 영구 삭제 실패:`, await response.json());
+                }
+            } catch (error) {
+                console.error(`Post ${postId} 영구 삭제 실패:`, error);
             }
-        });
-
-        // 4. 최근 조회된 포스트만 필터링하고, 조회 시간에 따라 정렬합니다.
-        const recentPosts = allPosts.filter(post => recentViewsMap.has(post.id))
-                                    .map(post => ({
-                                        ...post,
-                                        viewTimestamp: recentViewsMap.get(post.id).timestamp // 조회 시간 추가
-                                    }))
-                                    .sort((a, b) => new Date(b.viewTimestamp) - new Date(a.viewTimestamp)); // 최신순 정렬
-
-        displayPosts(recentPosts, 'recent-posts-list');
-
-        if (recentPosts.length === 0) {
-            document.getElementById('recent-posts-list').innerHTML = '<p>최근에 본 포스트가 없습니다.</p>';
         }
 
-    } catch (error) {
-        console.error('최근 포스트를 불러오는 중 오류 발생:', error);
-        document.getElementById('recent-posts-list').innerHTML = '<p>최근 포스트를 불러올 수 없습니다.</p>';
-    }
-}
-
-/**
- * 인기 포스트를 가져와서 'popular' 탭에 표시합니다.
- * (이 함수는 현재 구현되어 있지 않으므로, 필요에 따라 구현해야 합니다.)
- */
-async function loadPopularPosts() {
-    // 이 함수는 '인기' 포스트를 로드하는 로직을 포함해야 합니다.
-    // 현재는 더미 데이터 또는 비어있는 상태입니다.
-    // 예: 조회수 또는 좋아요 수 기준으로 정렬된 포스트를 가져오는 로직 추가
-    try {
-        const response = await fetch('/.netlify/functions/get-posts'); // 예시: 모든 포스트를 가져옴
-        let posts = await response.json();
-        // 실제 인기 포스트 로직 (예: 좋아요 수 또는 조회수 기준 정렬)
-        posts.sort((a, b) => (b.likes || 0) - (a.likes || 0)); // 좋아요 수 기준으로 정렬 예시
-        displayPosts(posts.slice(0, 5), 'popular-posts-list'); // 상위 5개만 표시
-    } catch (error) {
-        console.error('인기 포스트를 불러오는 중 오류 발생:', error);
-        document.getElementById('popular-posts-list').innerHTML = '<p>인기 포스트를 불러올 수 없습니다.</p>';
-    }
-}
-
-
-/**
- * 주어진 포스트 배열을 지정된 HTML 요소에 표시합니다.
- * @param {Array} posts - 표시할 포스트 객체 배열
- * @param {string} elementId - 포스트를 표시할 HTML 요소의 ID
- */
-function displayPosts(posts, elementId) {
-    const postListElement = document.getElementById(elementId);
-    postListElement.innerHTML = ''; // 기존 내용 지우기
-
-    if (posts.length === 0) {
-        postListElement.innerHTML = '<p>표시할 포스트가 없습니다.</p>';
-        return;
+        await showCustomAlert(`${deletedCount}개의 글이 영구 삭제되었습니다.`); // Promise를 기다리도록 수정
+        toggleSelectionMode();
+        fetchPostsAndRender(); // 데이터 새로고침
     }
 
-    posts.forEach(post => {
-        const postItem = document.createElement('div');
-        postItem.className = 'post-item';
-        postItem.innerHTML = `
-            <h3><a href="post.html?id=${post.id}">${post.title}</a></h3>
-            <p>${post.summary || post.content.substring(0, 100) + '...'}</p>
-            <small>작성일: ${new Date(post.date).toLocaleDateString()}</small>
-            <small>좋아요: ${post.likes || 0}</small>
-        `;
-        postListElement.appendChild(postItem);
-    });
-}
+    function renderPosts() {
+        if (currentTab === 'deleted') {
+            selectBtn.style.display = 'block';
+        } else {
+            selectBtn.style.display = 'none';
+            if (isSelectionMode) {
+                toggleSelectionMode();
+            }
+        }
+
+        if (isLoadingPosts) {
+            postListContainer.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 0;">
+                    <div style="border: 4px solid rgba(0, 0, 0, 0.1); border-top: 4px solid #333; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;"></div>
+                    <p style="margin-top: 15px; color: #888;">글 목록을 불러오는 중...</p>
+                </div>
+                <style>
+                    @keyframes spin {
+                        0% { transform: rotate(0deg); }
+                        100% { transform: rotate(360deg); }
+                    }
+                </style>
+            `;
+            postCountElement.textContent = ''; // 로딩 중일 때 텍스트 제거
+            return;
+        }
+
+        const purchasedPosts = allPosts.filter(p => p.status !== 'deleted');
+        const deletedPosts = allPosts.filter(p => p.status === 'deleted');
+
+        let postsToRender = [];
+
+        if (currentTab === 'purchased') {
+            postsToRender = purchasedPosts;
+        } else if (currentTab === 'liked') {
+            postsToRender = purchasedPosts.filter(post => post.liked);
+        } else if (currentTab === 'recent') {
+            const combinedPosts = [...purchasedPosts, ...deletedPosts];
+            postsToRender = recentViews.map(view => combinedPosts.find(p => p.id === view.id)).filter(Boolean);
+        } else if (currentTab === 'deleted') {
+            postsToRender = deletedPosts;
+        }
+
+        if (searchTerm) {
+            postsToRender = postsToRender.filter(p =>
+                (p.title && p.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (p.author && p.author.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+        }
+
+        let sortKey = 'timestamp';
+        if (currentTab === 'deleted') {
+            sortKey = 'deletedTimestamp';
+        } else if (currentTab === 'liked') {
+            sortKey = 'likedTimestamp';
+        }
+
+        if (currentSort === 'newest') {
+            postsToRender.sort((a, b) => b[sortKey] - a[sortKey]);
+        } else if (currentSort === 'oldest') {
+            postsToRender.sort((a, b) => a[sortKey] - b[sortKey]);
+        }
+
+        // ✅ 페이지네이션 로직 추가
+        totalPages = Math.ceil(postsToRender.length / POSTS_PER_PAGE);
+        currentPage = Math.min(currentPage, totalPages); // 총 페이지 수보다 현재 페이지가 크면 조정
+        
+        const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+        const endIndex = startIndex + POSTS_PER_PAGE;
+        const pagedPosts = postsToRender.slice(startIndex, endIndex);
+
+        postCountElement.textContent = `${postsToRender.length}개의 포스트`;
+
+        postListContainer.innerHTML = '';
+
+        if (pagedPosts.length === 0 && postsToRender.length > 0) {
+            currentPage = 1; // 💡 만약 현재 페이지에 글이 없으면 1페이지로 돌아가기
+            renderPosts();
+            return;
+        } else if (postsToRender.length === 0) {
+            postListContainer.innerHTML = '<p style="text-align:center; color:#888; margin-top: 2rem;">표시할 글이 없습니다.</p>';
+        }
+
+        pagedPosts.forEach(post => {
+            const linkElement = document.createElement('a');
+            linkElement.href = `post.html?id=${post.id}&tab=${currentTab}`;
+            linkElement.className = 'post-item-link';
+            const thumbnailHTML = post.thumbnail ? `<img src="${post.thumbnail}" alt="썸네일" class="thumbnail">` : '';
+            const checkboxHTML = isSelectionMode ? `<div class="checkbox-container"><input type="checkbox" class="post-checkbox" data-id="${post.id}"></div>` : '';
+
+            linkElement.innerHTML = `
+                <div class="post-item">
+                    ${checkboxHTML}
+                    <div class="thumbnail-container">${thumbnailHTML}</div>
+                    <div class="post-info">
+                        <h3>${post.title}</h3>
+                        <p>${post.author} · 영구 열람</p>
+                        ${post.tag ? `<span class="tag">${post.tag}</span>` : ''}
+                    </div>
+                </div>`;
+
+            const postItemDiv = linkElement.querySelector('.post-item');
+            const checkbox = postItemDiv ? postItemDiv.querySelector('.post-checkbox') : null;
+
+            if (isSelectionMode) {
+                linkElement.href = '#';
+                if (postItemDiv) {
+                    postItemDiv.addEventListener('click', (e) => {
+                        if (checkbox && e.target !== checkbox) {
+                            checkbox.checked = !checkbox.checked;
+                            checkbox.dispatchEvent(new Event('change'));
+                        }
+                    });
+                }
+            }
+
+            if (checkbox) {
+                if (selectedPostIds.includes(post.id)) {
+                    checkbox.checked = true;
+                }
+                checkbox.addEventListener('change', (e) => {
+                    const postId = parseInt(e.target.dataset.id);
+                    if (e.target.checked) {
+                        if (!selectedPostIds.includes(postId)) {
+                            selectedPostIds.push(postId);
+                        }
+                    } else {
+                        selectedPostIds = selectedPostIds.filter(id => id !== postId);
+                    }
+                    updateBulkDeleteBtn();
+                });
+            }
+
+            postListContainer.appendChild(linkElement);
+        });
+
+        // ✅ 페이지네이션 렌더링 호출
+        renderPagination();
+    }
+
+    // ✅ 페이지네이션 버튼을 렌더링하는 함수
+    function renderPagination() {
+        paginationContainer.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const currentBlock = Math.floor((currentPage - 1) / PAGES_PER_BLOCK);
+        const startPage = currentBlock * PAGES_PER_BLOCK + 1;
+        const endPage = Math.min(startPage + PAGES_PER_BLOCK - 1, totalPages);
+
+        // 이전 블록 화살표
+        const prevBlockBtn = document.createElement('button');
+        prevBlockBtn.className = `page-btn page-arrow ${currentBlock === 0 ? 'disabled' : ''}`;
+        prevBlockBtn.innerHTML = '&lt;';
+        prevBlockBtn.addEventListener('click', () => {
+            if (currentBlock > 0) {
+                currentPage = startPage - PAGES_PER_BLOCK;
+                renderPosts();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+        paginationContainer.appendChild(prevBlockBtn);
+
+        // 페이지 번호 버튼들
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+            pageBtn.textContent = i;
+            pageBtn.addEventListener('click', () => {
+                currentPage = i;
+                renderPosts();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            paginationContainer.appendChild(pageBtn);
+        }
+
+        // 다음 블록 화살표
+        const nextBlockBtn = document.createElement('button');
+        nextBlockBtn.className = `page-btn page-arrow ${endPage >= totalPages ? 'disabled' : ''}`;
+        nextBlockBtn.innerHTML = '&gt;';
+        nextBlockBtn.addEventListener('click', () => {
+            if (endPage < totalPages) {
+                currentPage = endPage + 1;
+                renderPosts();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+        paginationContainer.appendChild(nextBlockBtn);
+    }
+    
+    async function fetchPostsAndRender() {
+        isLoadingPosts = true;
+        renderPosts();
+
+        try {
+            const response = await fetch('/.netlify/functions/get-posts');
+            if (!response.ok) {
+                throw new Error('Failed to fetch posts.');
+            }
+            allPosts = await response.json();
+        } catch (error) {
+            console.error("Error fetching posts:", error);
+            allPosts = [];
+        } finally {
+            isLoadingPosts = false;
+            // ✅ 데이터 로드 후 1페이지로 돌아가기
+            currentPage = 1;
+            renderPosts();
+        }
+    }
+    
+    async function fetchRecentViews() {
+        try {
+            const response = await fetch('/.netlify/functions/get-recent-views');
+            if (!response.ok) {
+                throw new Error('Failed to fetch recent views.');
+            }
+            recentViews = await response.json();
+        } catch (error) {
+            console.error("Error fetching recent views:", error);
+            recentViews = [];
+        }
+    }
+
+    // ✅ 비밀번호 모달 표시 함수
+    function showPasswordModal() {
+        passwordModalOverlay.classList.add('visible');
+        modalPasswordInput.value = ''; // 입력 필드 초기화
+        modalErrorMessage.style.visibility = 'hidden'; // 에러 메시지 숨김
+        modalPasswordInput.focus(); // 입력 필드에 포커스
+    }
+
+    // ✅ 비밀번호 모달 숨김 함수
+    function hidePasswordModal() {
+        passwordModalOverlay.classList.remove('visible');
+    }
+
+    // ✅ 모달 내 비밀번호 확인 처리 함수
+    function handleModalLogin() {
+        const enteredPassword = modalPasswordInput.value;
+        if (enteredPassword === CORRECT_PASSWORD) {
+            hidePasswordModal();
+            window.location.href = 'write.html?tab=${currentTab}'; // 비밀번호 일치 시 글쓰기 페이지로 이동  // 변경된 코드
+        } else {
+            modalErrorMessage.style.visibility = 'visible'; // 에러 메시지 표시
+        }
+    }
+
+    // ✅ 페이지 로드 시 URL 파라미터를 확인하여 탭을 변경하는 함수
+    function checkUrlAndSetTab() {
+        const params = new URLSearchParams(window.location.search);
+        const tabFromUrl = params.get('tab');
+        if (tabFromUrl) {
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tabFromUrl) {
+                    btn.classList.add('active');
+                    currentTab = tabFromUrl;
+                }
+            });
+        }
+    }
+
+    function setupEventListeners() {
+      tabButtons.forEach(button => {
+        button.addEventListener('click', (e) => {
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            e.currentTarget.classList.add('active');
+            currentTab = e.currentTarget.dataset.tab;
+            currentSort = 'newest';
+            sortText.textContent = '최신순';
+            // ✅ 탭 변경 시 1페이지로 초기화
+            currentPage = 1;
+            renderPosts();
+        });
+      });
+
+      let searchTimeout;
+      searchInput.addEventListener('input', (e) => {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            searchTerm = e.target.value;
+            // ✅ 검색어 입력 시 1페이지로 초기화
+            currentPage = 1;
+            renderPosts();
+        }, 300);
+      });
+
+      sortButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sortOptionsContainer.classList.toggle('active');
+      });
+
+      sortMenu.addEventListener('click', (e) => {
+        if (e.target.classList.contains('sort-option')) {
+            const selectedSort = e.target.dataset.sort;
+            if (currentSort !== selectedSort) {
+                currentSort = selectedSort;
+                sortText.textContent = e.target.textContent;
+                // ✅ 정렬 방식 변경 시 1페이지로 초기화
+                currentPage = 1;
+                renderPosts();
+            }
+            sortOptionsContainer.classList.remove('active');
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!sortOptionsContainer.contains(e.target)) {
+            sortOptionsContainer.classList.remove('active');
+        }
+      });
+
+      selectBtn.addEventListener('click', toggleSelectionMode);
+      bulkDeleteBtn.addEventListener('click', permanentDeleteSelectedPosts);
+
+      // ✅ 글쓰기 버튼 클릭 시 비밀번호 모달 표시
+      addPostBtn.addEventListener('click', (e) => {
+          e.preventDefault(); // 기본 링크 이동 방지
+          showPasswordModal();
+      });
+
+      // ✅ 모달 내 확인 버튼 클릭 이벤트
+      modalLoginBtn.addEventListener('click', handleModalLogin);
+
+      // ✅ 모달 내 비밀번호 입력 필드에서 Enter 키 입력 이벤트
+      modalPasswordInput.addEventListener('keypress', (e) => {
+          if (e.key === 'Enter') {
+              handleModalLogin();
+          }
+      });
+
+      // ✅ 모달 닫기 버튼 클릭 이벤트
+      closeModalBtn.addEventListener('click', hidePasswordModal);
+
+      // ✅ 모달 오버레이 클릭 시 모달 닫기 (모달 컨테이너 외부 클릭 시)
+      passwordModalOverlay.addEventListener('click', (e) => {
+          if (e.target === passwordModalOverlay) {
+              hidePasswordModal();
+          }
+      });
+    }
+    
+    checkUrlAndSetTab();
+    fetchPostsAndRender();
+    fetchRecentViews();
+    setupEventListeners();
+});
