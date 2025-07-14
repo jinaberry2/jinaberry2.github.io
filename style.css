@@ -149,7 +149,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; }
     font-size: 1rem;
     padding: 0;
     text-align: left;
-    letter-spacing: -0.02rem; /* ✅ 살짝 좁혀서 들뜬 느낌 줄이기 */
+    
     margin-left: -0.05rem;
 }
 
