@@ -102,7 +102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (response.ok) {
                 alert(message);
-                window.location.href = `archive.html?tab=${sourceTab || 'recent'}`;
+                window.location.href = `archive.html`;
             } else {
                 const error = await response.json();
                 alert(`작업 실패: ${error.message}`);
