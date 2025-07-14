@@ -103,7 +103,7 @@ body {
     cursor: pointer;
     padding: 0;
     line-height: 1;
-    color: black; /* 점 세 개 버튼 색상을 검정으로 명시 */
+    color: #ffffff; /* 점 세 개 버튼 색상을 흰색으로 명시 */
 }
 .options-menu {
     position: absolute;
@@ -177,7 +177,7 @@ body {
     color: #868e96;
 }
 .action-btn.active .icon {
-    color: red;
+    color: #e63e6d;
     opacity: 1;
     transform: scale(1.2);
 }
