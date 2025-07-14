@@ -10,7 +10,7 @@ header {
 h1 { text-align: center; margin: 0 0 1rem 0; }
 .tabs { display: flex; justify-content: space-around; margin-bottom: 1rem; }
 .tabs a { text-decoration: none; color: #888; padding: 0.5rem; }
-.tabs a.active { color: #3e2a2a; border-bottom: 2px solid #3e2a2a; font-weight: bold; }
+.tabs a.active { color: #5c4534; border-bottom: 2px solid #e63e6d; font-weight: bold; }
 
 .search-box {
     position: relative;
@@ -263,7 +263,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; }
     font-size: 1.2rem;
     line-height: 1.4;
     margin-bottom: 1.5rem;
-    color: #3e2a2a;
+    color: #5c4534;
 }
 
 /* 기존 .password-input, .login-btn, .error-message 스타일은 그대로 사용 */
