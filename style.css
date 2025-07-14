@@ -310,3 +310,54 @@ h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
 .loading-message {
     margin-top: 8rem; /* ✅ 이 값을 늘리면 로딩 메시지가 더 아래로 이동합니다. */
 }
+
+/* 페이지네이션 컨테이너 */
+.pagination-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem 0 5rem; /* 하단 '+' 버튼과 겹치지 않도록 충분한 패딩 추가 */
+}
+
+/* 페이지 버튼 공통 스타일 */
+.page-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    color: #888;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+/* 활성화된 페이지 버튼 스타일 */
+.page-btn.active {
+    background-color: #5c4534;
+    color: #fff;
+    border-color: #5c4534;
+    font-weight: bold;
+}
+
+/* 호버 효과 */
+.page-btn:not(.active):hover:not(.disabled) {
+    background-color: #f0f2f5;
+    color: #5c4534;
+}
+
+/* 비활성화된 버튼 스타일 */
+.page-btn.disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
+}
+
+/* 이전/다음 블록 화살표 스타일 */
+.page-arrow {
+    font-weight: bold;
+    font-size: 1rem;
+}
