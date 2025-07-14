@@ -173,15 +173,18 @@ body {
     -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 */
   }
 
-  .toolbar-left,
-  .toolbar-center,
-  .toolbar-right {
-    flex-shrink: 0; /* 줄어들지 않게 */
-  }
+  .toolbar-wrapper {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  min-width: max-content; /* 내부 콘텐츠가 넘칠 수 있게 */
+}
 
-  .toolbar-left,
-  .toolbar-center,
-  .toolbar-right {
-    min-width: max-content; /* 내부 버튼 너비를 다 감쌀 수 있게 */
-  }
+.toolbar-left,
+.toolbar-center,
+.toolbar-right {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
 }
