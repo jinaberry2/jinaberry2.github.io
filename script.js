@@ -1,9 +1,9 @@
 // script.js
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => { // async 키워드 추가
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
-    let recentViews = [];
+    let recentViews = []; // recentViews 배열 초기화
     let currentSort = 'newest';
     let isSelectionMode = false;
     let selectedPostIds = [];
@@ -38,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const modalErrorMessage = document.getElementById('modal-error-message');
     const closeModalBtn = document.getElementById('close-modal-btn');
 
-    // ✅ 여기에 원하는 비밀번호를 설정하세요. 
+    // ✅ 여기에 원하는 비밀번호를 설정하세요.
     const CORRECT_PASSWORD = '0506';
 
     // Custom alert function (Tailwind CSS 클래스 제거 및 기본 스타일 적용)
@@ -145,7 +145,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await showCustomAlert(`${deletedCount}개의 글이 영구 삭제되었습니다.`); // Promise를 기다리도록 수정
         toggleSelectionMode();
-        fetchPostsAndRender(); // 데이터 새로고침
+        await fetchPostsAndRender(); // 데이터 새로고침
+        await fetchRecentViews(); // 최근 조회 기록도 새로고침
     }
 
     function renderPosts() {
@@ -185,8 +186,15 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (currentTab === 'liked') {
             postsToRender = purchasedPosts.filter(post => post.liked);
         } else if (currentTab === 'recent') {
+            // recentViews에 timestamp가 있다고 가정하고 정렬
             const combinedPosts = [...purchasedPosts, ...deletedPosts];
-            postsToRender = recentViews.map(view => combinedPosts.find(p => p.id === view.id)).filter(Boolean);
+            postsToRender = recentViews
+                .map(view => {
+                    const post = combinedPosts.find(p => p.id === view.postId); // view.id 대신 view.postId 사용
+                    return post ? { ...post, viewTimestamp: view.timestamp } : null;
+                })
+                .filter(Boolean) // null 값 제거
+                .sort((a, b) => new Date(b.viewTimestamp) - new Date(a.viewTimestamp)); // 최신 조회 순으로 정렬
         } else if (currentTab === 'deleted') {
             postsToRender = deletedPosts;
         }
@@ -203,13 +211,19 @@ document.addEventListener('DOMContentLoaded', () => {
             sortKey = 'deletedTimestamp';
         } else if (currentTab === 'liked') {
             sortKey = 'likedTimestamp';
+        } else if (currentTab === 'recent') { // 'recent' 탭은 조회 시간으로 정렬되므로 이 부분은 건드리지 않음
+            // 'recent' 탭은 이미 위에서 viewTimestamp로 정렬되었으므로 추가 정렬 로직을 적용하지 않음
         }
 
-        if (currentSort === 'newest') {
-            postsToRender.sort((a, b) => b[sortKey] - a[sortKey]);
-        } else if (currentSort === 'oldest') {
-            postsToRender.sort((a, b) => a[sortKey] - b[sortKey]);
+
+        if (currentTab !== 'recent') { // 'recent' 탭이 아닐 때만 기존 정렬 로직 적용
+            if (currentSort === 'newest') {
+                postsToRender.sort((a, b) => b[sortKey] - a[sortKey]);
+            } else if (currentSort === 'oldest') {
+                postsToRender.sort((a, b) => a[sortKey] - b[sortKey]);
+            }
         }
+
 
         // ✅ 페이지네이션 로직 추가
         totalPages = Math.ceil(postsToRender.length / POSTS_PER_PAGE);
@@ -352,8 +366,8 @@ document.addEventListener('DOMContentLoaded', () => {
             allPosts = [];
         } finally {
             isLoadingPosts = false;
-            // ✅ 데이터 로드 후 1페이지로 돌아가기
-            currentPage = 1;
+            // ✅ 데이터 로드 후 1페이지로 돌아가기 (이전 탭 유지 로직과 충돌 방지를 위해 주석 처리)
+            // currentPage = 1;
             renderPosts();
         }
     }
@@ -364,6 +378,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!response.ok) {
                 throw new Error('Failed to fetch recent views.');
             }
+            // recentViews 데이터에 postId와 timestamp가 포함되어야 함
             recentViews = await response.json();
         } catch (error) {
             console.error("Error fetching recent views:", error);
@@ -389,38 +404,59 @@ document.addEventListener('DOMContentLoaded', () => {
         const enteredPassword = modalPasswordInput.value;
         if (enteredPassword === CORRECT_PASSWORD) {
             hidePasswordModal();
-            window.location.href = 'write.html?tab=${currentTab}'; // 비밀번호 일치 시 글쓰기 페이지로 이동  // 변경된 코드
+            // 현재 탭을 유지하면서 write.html로 이동
+            window.location.href = `write.html?tab=${currentTab}`;
         } else {
             modalErrorMessage.style.visibility = 'visible'; // 에러 메시지 표시
         }
     }
 
     // ✅ 페이지 로드 시 URL 파라미터를 확인하여 탭을 변경하는 함수
-    function checkUrlAndSetTab() {
+    async function checkUrlAndSetTab() { // async 키워드 추가
         const params = new URLSearchParams(window.location.search);
         const tabFromUrl = params.get('tab');
-        if (tabFromUrl) {
-            tabButtons.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.tab === tabFromUrl) {
-                    btn.classList.add('active');
-                    currentTab = tabFromUrl;
-                }
-            });
+        const lastActiveTab = localStorage.getItem('activeTab');
+
+        // URL 파라미터가 없으면 localStorage에서 가져오고, 둘 다 없으면 'purchased'
+        const initialTab = tabFromUrl || lastActiveTab || 'purchased';
+        
+        // 모든 탭 버튼의 active 클래스 제거
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+
+        // 초기 탭 설정
+        const targetButton = document.querySelector(`.tab-btn[data-tab="${initialTab}"]`);
+        if (targetButton) {
+            targetButton.classList.add('active');
+            currentTab = initialTab;
+        } else {
+            // 유효하지 않은 탭이 URL에 있을 경우 기본값으로 설정
+            document.querySelector(`.tab-btn[data-tab="purchased"]`).classList.add('active');
+            currentTab = 'purchased';
         }
+        localStorage.setItem('activeTab', currentTab); // 현재 탭을 localStorage에 저장
+
+        // 초기 데이터 로드 및 렌더링
+        await fetchRecentViews(); // 최근 조회 기록 먼저 로드
+        await fetchPostsAndRender();
     }
 
     function setupEventListeners() {
       tabButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
+        button.addEventListener('click', async (e) => { // async 키워드 추가
             tabButtons.forEach(btn => btn.classList.remove('active'));
             e.currentTarget.classList.add('active');
             currentTab = e.currentTarget.dataset.tab;
+            localStorage.setItem('activeTab', currentTab); // 탭 변경 시 localStorage 업데이트
             currentSort = 'newest';
             sortText.textContent = '최신순';
             // ✅ 탭 변경 시 1페이지로 초기화
             currentPage = 1;
-            renderPosts();
+            
+            // 'recent' 탭 클릭 시 fetchRecentViews 호출
+            if (currentTab === 'recent') {
+                await fetchRecentViews();
+            }
+            renderPosts(); // 탭 변경 시 포스트 다시 렌더링
         });
       });
 
@@ -490,8 +526,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    checkUrlAndSetTab();
-    fetchPostsAndRender();
-    fetchRecentViews();
+    // 초기 로드 시 탭 설정 및 데이터 가져오기
+    await checkUrlAndSetTab(); // URL 파라미터 및 localStorage 기반으로 탭 설정 및 데이터 로드
     setupEventListeners();
 });
