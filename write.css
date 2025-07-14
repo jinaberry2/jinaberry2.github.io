@@ -164,27 +164,28 @@ body {
 }
 
 @media (max-width: 768px) {
-  .editor-toolbar {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
-    -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 */
-  }
+    .editor-toolbar {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        padding: 0; /* 수정: 모바일에서 툴바 자체의 패딩을 0으로 설정 */
+        -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 */
+    }
 
-  .toolbar-wrapper {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 0.5rem;
-  min-width: max-content; /* 내부 콘텐츠가 넘칠 수 있게 */
-}
+    .toolbar-wrapper {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        min-width: max-content; /* 내부 콘텐츠가 넘칠 수 있게 */
+        padding-left: 1.5rem; /* 추가: 툴바 래퍼에 좌측 패딩 적용 */
+        padding-right: 1.5rem; /* 추가: 툴바 래퍼에 우측 패딩 적용 */
+    }
 
-.toolbar-left,
-.toolbar-center,
-.toolbar-right {
-  display: flex;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
 }
