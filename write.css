@@ -164,14 +164,29 @@ body {
 }
 
 @media (max-width: 768px) {
-  .editor-toolbar {
-    overflow-x: auto; /* 좌우 스크롤 가능 */
-    flex-wrap: nowrap; /* 요소들이 다음 줄로 넘어가지 않게 함 */
-    justify-content: flex-start; /* 좌측 정렬하여 스크롤하기 좋게 만듦 */
-    padding-left: 1.5rem; /* 헤더와 동일한 좌측 패딩 */
-    padding-right: 1.5rem; /* 헤더와 동일한 우측 패딩 */
-  }
-  .editor-toolbar::-webkit-scrollbar {
+    .editor-toolbar {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+        padding: 0; /* 수정: 모바일에서 툴바 자체의 패딩을 0으로 설정 */
+        -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 */
+    }
+.editor-toolbar::-webkit-scrollbar {
     display: none; /* 스크롤바 숨김 (선택 사항) */
   }
-}
+    .toolbar-wrapper {
+        display: flex;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
+        min-width: max-content; /* 내부 콘텐츠가 넘칠 수 있게 */
+        padding-left: 1.5rem; /* 추가: 툴바 래퍼에 좌측 패딩 적용 */
+        padding-right: 1.5rem; /* 추가: 툴바 래퍼에 우측 패딩 적용 */
+    }
+
+    .toolbar-left,
+    .toolbar-center,
+    .toolbar-right {
+        display: flex;
+        gap: 0.5rem;
+        flex-shrink: 0;
+    }
