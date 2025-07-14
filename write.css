@@ -118,7 +118,7 @@ body {
     padding-bottom: 1.5rem;
     border-bottom: 1px solid #f1f3f5;
     margin-bottom: 2rem;
-    margin-top: 2.5rem; /* 툴바 아래 간격 추가 (툴바와 제목 사이) */
+    margin-top: 2rem; /* 툴바 아래 간격 추가 (툴바와 제목 사이) */
 }
 .title-input {
     border: none;
