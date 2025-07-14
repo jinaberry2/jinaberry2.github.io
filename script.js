@@ -1,5 +1,5 @@
-document.addEventListener('DOMContentLoaded', () => {
-    let currentTab = 'purchased';
+document.addEventListener('DOMContentLoaded', async () => { // DOMContentLoaded를 async로 변경
+    let currentTab = 'purchased'; // 초기값 설정
     let searchTerm = '';
     let allPosts = [];
     let recentViews = [];
@@ -144,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         await showCustomAlert(`${deletedCount}개의 글이 영구 삭제되었습니다.`); // Promise를 기다리도록 수정
         toggleSelectionMode();
-        fetchPostsAndRender(); // 데이터 새로고침
+        await fetchPostsAndRender(); // 데이터 새로고침
     }
 
     function renderPosts() {
@@ -407,31 +407,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // ✅ 페이지 로드 시 URL 파라미터를 확인하여 탭을 변경하는 함수
-    function checkUrlAndSetTab() {
+    // ✅ 페이지 로드 시 URL 파라미터를 확인하여 탭을 변경하는 함수 (로컬 스토리지와 통합)
+    async function initializeTab() {
         const params = new URLSearchParams(window.location.search);
         const tabFromUrl = params.get('tab');
+        const savedTab = localStorage.getItem('lastActiveTab');
+
         if (tabFromUrl) {
-            tabButtons.forEach(btn => {
-                btn.classList.remove('active');
-                if (btn.dataset.tab === tabFromUrl) {
-                    btn.classList.add('active');
-                    currentTab = tabFromUrl;
-                }
-            });
+            currentTab = tabFromUrl;
+        } else if (savedTab) {
+            currentTab = savedTab;
+        } else {
+            currentTab = 'purchased'; // 기본 탭
+        }
+
+        // 현재 탭에 맞는 버튼 활성화
+        tabButtons.forEach(btn => {
+            btn.classList.remove('active');
+            if (btn.dataset.tab === currentTab) {
+                btn.classList.add('active');
+            }
+        });
+
+        // 'recent' 탭인 경우 초기 로드 시에도 최신 데이터 반영
+        if (currentTab === 'recent') {
+            await fetchRecentViews();
         }
     }
 
     function setupEventListeners() {
       tabButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
+        button.addEventListener('click', async (e) => { // async 추가
             tabButtons.forEach(btn => btn.classList.remove('active'));
             e.currentTarget.classList.add('active');
             currentTab = e.currentTarget.dataset.tab;
+            localStorage.setItem('lastActiveTab', currentTab); // 탭 변경 시 로컬 스토리지에 저장
             currentSort = 'newest';
             sortText.textContent = '최신순';
             // ✅ 탭 변경 시 1페이지로 초기화
             currentPage = 1;
+
+            // 'recent' 탭으로 이동 시 최신 조회 기록을 다시 가져옴
+            if (currentTab === 'recent') {
+                await fetchRecentViews();
+            }
             renderPosts();
         });
       });
@@ -502,7 +521,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
-    checkUrlAndSetTab();
-    fetchPostsAndRender(); // 게시물과 최근 조회 모두 가져오도록 변경
+    await initializeTab(); // 탭 초기화 로직을 먼저 실행
+    await fetchPostsAndRender(); // 게시물과 최근 조회 모두 가져오도록 변경
     setupEventListeners();
 });
