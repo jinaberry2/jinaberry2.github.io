@@ -174,7 +174,7 @@ body {
   }
   .editor-toolbar {
     position: fixed;
-    top: 3.5rem; /* 헤더 높이 아래 */
+    top: 2.5rem; /* 헤더 높이 아래 */
     left: 0;
     right: 0;
     width: 100%;
