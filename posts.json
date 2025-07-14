@@ -112,8 +112,9 @@
     "timestamp": 1752534488544,
     "thumbnail": null,
     "id": 1752534489591,
-    "liked": false,
-    "views": 1
+    "liked": true,
+    "views": 1,
+    "likedTimestamp": 1752537381801
   },
   {
     "title": "ㄴㅇㄹ",
