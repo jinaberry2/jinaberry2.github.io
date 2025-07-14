@@ -9,6 +9,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let selectedPostIds = [];
     let isLoadingPosts = true;
 
+    // ✅ Pagination variables
+    const POSTS_PER_PAGE = 10;
+    let currentPage = 1;
+    let totalPages = 1;
+    const PAGES_PER_BLOCK = 5;
+
     const postListContainer = document.getElementById('post-list-container');
     const tabButtons = document.querySelectorAll('.tab-btn');
     const searchInput = document.getElementById('search-input');
@@ -21,6 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const addPostBtn = document.getElementById('add-post-btn');
     const bulkDeleteBar = document.getElementById('bulk-delete-bar');
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    // ✅ Pagination container
+    const paginationContainer = document.getElementById('pagination-container');
+
 
     // ✅ 비밀번호 모달 관련 요소들
     const passwordModalOverlay = document.getElementById('password-modal-overlay');
@@ -189,13 +198,11 @@ document.addEventListener('DOMContentLoaded', () => {
             );
         }
 
-        if (postCountElement) {
-            postCountElement.textContent = `${postsToRender.length}개의 포스트`;
-        }
-
         let sortKey = 'timestamp';
         if (currentTab === 'deleted') {
             sortKey = 'deletedTimestamp';
+        } else if (currentTab === 'liked') {
+            sortKey = 'likedTimestamp';
         }
 
         if (currentSort === 'newest') {
@@ -204,14 +211,27 @@ document.addEventListener('DOMContentLoaded', () => {
             postsToRender.sort((a, b) => a[sortKey] - b[sortKey]);
         }
 
+        // ✅ 페이지네이션 로직 추가
+        totalPages = Math.ceil(postsToRender.length / POSTS_PER_PAGE);
+        currentPage = Math.min(currentPage, totalPages); // 총 페이지 수보다 현재 페이지가 크면 조정
+        
+        const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+        const endIndex = startIndex + POSTS_PER_PAGE;
+        const pagedPosts = postsToRender.slice(startIndex, endIndex);
+
+        postCountElement.textContent = `${postsToRender.length}개의 포스트`;
+
         postListContainer.innerHTML = '';
 
-        if (postsToRender.length === 0) {
-            postListContainer.innerHTML = '<p style="text-align:center; color:#888; margin-top: 2rem;">표시할 글이 없습니다.</p>';
+        if (pagedPosts.length === 0 && postsToRender.length > 0) {
+            currentPage = 1; // 💡 만약 현재 페이지에 글이 없으면 1페이지로 돌아가기
+            renderPosts();
             return;
+        } else if (postsToRender.length === 0) {
+            postListContainer.innerHTML = '<p style="text-align:center; color:#888; margin-top: 2rem;">표시할 글이 없습니다.</p>';
         }
 
-        postsToRender.forEach(post => {
+        pagedPosts.forEach(post => {
             const linkElement = document.createElement('a');
             linkElement.href = `post.html?id=${post.id}&tab=${currentTab}`;
             linkElement.className = 'post-item-link';
@@ -263,8 +283,60 @@ document.addEventListener('DOMContentLoaded', () => {
 
             postListContainer.appendChild(linkElement);
         });
+
+        // ✅ 페이지네이션 렌더링 호출
+        renderPagination();
     }
 
+    // ✅ 페이지네이션 버튼을 렌더링하는 함수
+    function renderPagination() {
+        paginationContainer.innerHTML = '';
+        if (totalPages <= 1) return;
+
+        const currentBlock = Math.floor((currentPage - 1) / PAGES_PER_BLOCK);
+        const startPage = currentBlock * PAGES_PER_BLOCK + 1;
+        const endPage = Math.min(startPage + PAGES_PER_BLOCK - 1, totalPages);
+
+        // 이전 블록 화살표
+        const prevBlockBtn = document.createElement('button');
+        prevBlockBtn.className = `page-btn page-arrow ${currentBlock === 0 ? 'disabled' : ''}`;
+        prevBlockBtn.innerHTML = '&lt;';
+        prevBlockBtn.addEventListener('click', () => {
+            if (currentBlock > 0) {
+                currentPage = startPage - PAGES_PER_BLOCK;
+                renderPosts();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+        paginationContainer.appendChild(prevBlockBtn);
+
+        // 페이지 번호 버튼들
+        for (let i = startPage; i <= endPage; i++) {
+            const pageBtn = document.createElement('button');
+            pageBtn.className = `page-btn ${i === currentPage ? 'active' : ''}`;
+            pageBtn.textContent = i;
+            pageBtn.addEventListener('click', () => {
+                currentPage = i;
+                renderPosts();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            });
+            paginationContainer.appendChild(pageBtn);
+        }
+
+        // 다음 블록 화살표
+        const nextBlockBtn = document.createElement('button');
+        nextBlockBtn.className = `page-btn page-arrow ${endPage >= totalPages ? 'disabled' : ''}`;
+        nextBlockBtn.innerHTML = '&gt;';
+        nextBlockBtn.addEventListener('click', () => {
+            if (endPage < totalPages) {
+                currentPage = endPage + 1;
+                renderPosts();
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        });
+        paginationContainer.appendChild(nextBlockBtn);
+    }
+    
     async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
@@ -280,6 +352,8 @@ document.addEventListener('DOMContentLoaded', () => {
             allPosts = [];
         } finally {
             isLoadingPosts = false;
+            // ✅ 데이터 로드 후 1페이지로 돌아가기
+            currentPage = 1;
             renderPosts();
         }
     }
@@ -329,6 +403,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentTab = e.currentTarget.dataset.tab;
             currentSort = 'newest';
             sortText.textContent = '최신순';
+            // ✅ 탭 변경 시 1페이지로 초기화
+            currentPage = 1;
             renderPosts();
         });
       });
@@ -338,6 +414,8 @@ document.addEventListener('DOMContentLoaded', () => {
         clearTimeout(searchTimeout);
         searchTimeout = setTimeout(() => {
             searchTerm = e.target.value;
+            // ✅ 검색어 입력 시 1페이지로 초기화
+            currentPage = 1;
             renderPosts();
         }, 300);
       });
@@ -353,6 +431,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (currentSort !== selectedSort) {
                 currentSort = selectedSort;
                 sortText.textContent = e.target.textContent;
+                // ✅ 정렬 방식 변경 시 1페이지로 초기화
+                currentPage = 1;
                 renderPosts();
             }
             sortOptionsContainer.classList.remove('active');
