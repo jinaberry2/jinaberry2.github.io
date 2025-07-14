@@ -24,14 +24,17 @@
         width: 300px;
     }
     h1 {
-        margin-top: 1.5rem; /* ✅ 이 부분을 추가하여 전체 내용을 아래로 내립니다. */
+        /* ✅ 이 부분을 추가하여 제목을 위로 올리고 상단에 간격을 만듭니다. */
+        margin-top: 0.5rem; 
         font-size: 1.5rem;
-        margin-bottom: 1.5rem;
+        /* ✅ 제목 아래 간격을 넓힙니다. */
+        margin-bottom: 2.5rem; 
     }
     .password-input {
         width: 100%;
         padding: 0.75rem;
-        margin: 0.5rem auto;
+        /* ✅ 상하 마진을 조정하여 제목과의 간격을 맞춥니다. */
+        margin: 0 auto 1.5rem; 
         border: 1px solid #ddd;
         border-radius: 8px;
         box-sizing: border-box;
@@ -55,6 +58,7 @@
         visibility: hidden;
     }
 </style>
+    
    <link rel="icon" type="image/x-icon" href="/favicon_io/favicon.ico">
 <link rel="icon" type="image/png" href="/favicon_io/favicon-32x32.png" sizes="32x32">
 <link rel="icon" type="image/png" href="/favicon_io/favicon-16x16.png" sizes="16x16">
