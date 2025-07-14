@@ -1,151 +1,126 @@
-document.addEventListener('DOMContentLoaded', async () => {
-    const publishBtn = document.getElementById('publish-btn');
+// write.js
+document.addEventListener('DOMContentLoaded', () => {
+    // ✅ URL 파라미터에서 postId 가져오기
+    const urlParams = new URLSearchParams(window.location.search);
+    const editId = urlParams.get('id');
+    const isEditMode = !!editId;
+
     const postTitleInput = document.getElementById('post-title');
-    const postAuthorInput = document.getElementById('post-author');
-    const postContentEditable = document.getElementById('post-content');
-    const imageInput = document.getElementById('imageInput');
-    const insertImageBtn = document.getElementById('insertImageBtn');
-    const toolbarButtons = document.querySelectorAll('.editor-toolbar button');
-    const wordCountSpan = document.getElementById('word-count');
+    const postTagInput = document.getElementById('post-tag');
+    const postThumbnailInput = document.getElementById('post-thumbnail');
+    const postContentTextarea = document.getElementById('post-content');
+    const publishBtn = document.getElementById('publish-btn');
+    const pageTitle = document.getElementById('page-title');
+    const authorNameInput = document.getElementById('author-name');
+    const thumbnailPreview = document.getElementById('thumbnail-preview');
 
-    const params = new URLSearchParams(window.location.search);
-    const editId = params.get('editId');
-    let isEditMode = !!editId;
-    let originalPost = null;
-
-    const ADD_POST_URL = "/.netlify/functions/add-post";
-    const UPDATE_POST_URL = "/.netlify/functions/update-post";
-    
-    let firstImageThumbnail = null;
-
-    // 글자수 카운트 및 업데이트 함수
-    const updateWordCount = () => {
-        const text = postContentEditable.innerText.trim();
-        const count = text.length;
-        if (wordCountSpan) {
-            wordCountSpan.textContent = `${count}자`;
+    // ✅ 이미지 업로드 및 미리보기 기능
+    postThumbnailInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                thumbnailPreview.src = event.target.result;
+                thumbnailPreview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            thumbnailPreview.style.display = 'none';
         }
-    };
+    });
 
-    // 'post-content' 영역에 내용이 입력될 때마다 글자수 업데이트
-    if (postContentEditable) {
-        postContentEditable.addEventListener('input', updateWordCount);
-        updateWordCount();
-    }
-
-    // 수정 모드 초기화
+    // ✅ 수정 모드인 경우 기존 글 데이터 불러오기
     if (isEditMode) {
-        publishBtn.textContent = '수정 완료';
-        try {
-            // 새로운 함수를 사용하여 특정 글만 불러오기
-            const response = await fetch(`/.netlify/functions/get-post-by-id?id=${editId}`);
-            if (!response.ok) throw new Error('Failed to fetch post.');
-            originalPost = await response.json();
-
-            if (originalPost) {
-                postTitleInput.value = originalPost.title;
-                postAuthorInput.value = originalPost.author;
-                postContentEditable.innerHTML = originalPost.content;
-                updateWordCount();
-                // 기존 글의 썸네일 설정 (첫 번째 이미지의 src를 파싱)
-                const firstImg = postContentEditable.querySelector('img');
-                if (firstImg) {
-                    firstImageThumbnail = firstImg.src;
+        pageTitle.textContent = '글 수정하기';
+        publishBtn.textContent = '글 수정';
+        fetch(`/.netlify/functions/get-post-by-id?id=${editId}`)
+            .then(response => response.json())
+            .then(post => {
+                if (post) {
+                    postTitleInput.value = post.title;
+                    authorNameInput.value = post.author;
+                    postTagInput.value = post.tag || '';
+                    postContentTextarea.value = post.content;
+                    if (post.thumbnail) {
+                        thumbnailPreview.src = post.thumbnail;
+                        thumbnailPreview.style.display = 'block';
+                    }
+                } else {
+                    alert('글을 찾을 수 없습니다.');
+                    window.location.href = 'archive.html';
                 }
-            } else {
-                alert('수정할 글을 찾을 수 없습니다.');
-                isEditMode = false;
-                publishBtn.textContent = '발행';
-            }
-        } catch (error) {
-            alert('글을 불러오는 중 오류가 발생했습니다.');
-            console.error('Fetch error:', error);
-            isEditMode = false;
-            publishBtn.textContent = '발행';
-        }
+            })
+            .catch(error => {
+                console.error('Error fetching post:', error);
+                alert('글을 불러오는 중 오류가 발생했습니다.');
+                window.location.href = 'archive.html';
+            });
     }
 
     publishBtn.addEventListener('click', async () => {
         const title = postTitleInput.value.trim();
-        const author = postAuthorInput.value.trim();
-        const content = postContentEditable.innerHTML;
+        const author = authorNameInput.value.trim();
+        const tag = postTagInput.value.trim();
+        const content = postContentTextarea.value.trim();
+        const thumbnailFile = postThumbnailInput.files[0];
+        let thumbnailUrl = thumbnailPreview.src.startsWith('data:') ? thumbnailPreview.src : '';
 
-        if (!title || !content) {
-            alert('제목과 내용을 입력해주세요.');
+        if (!title || !author || !content) {
+            alert('제목, 작성자, 내용은 필수 입력 항목입니다.');
             return;
         }
 
-        const newPostData = {
-            title: title,
-            author: author,
-            content: content,
-            timestamp: Date.now(),
-            thumbnail: firstImageThumbnail,
-        };
-        
-        let url = ADD_POST_URL;
-        let bodyData = newPostData;
-        let message = '글이 성공적으로 등록되었습니다!';
+        if (thumbnailFile) {
+            const formData = new FormData();
+            formData.append('file', thumbnailFile);
+            formData.append('upload_preset', 'your_cloudinary_upload_preset'); // 여기에 Cloudinary 업로드 프리셋을 넣으세요
 
-        if (isEditMode) {
-            url = UPDATE_POST_URL;
-            bodyData = { ...originalPost, ...newPostData, id: originalPost.id };
-            message = '글이 성공적으로 수정되었습니다!';
+            try {
+                const cloudinaryResponse = await fetch('https://api.cloudinary.com/v1_1/your_cloudinary_cloud_name/image/upload', { // 여기에 Cloudinary 클라우드 이름을 넣으세요
+                    method: 'POST',
+                    body: formData
+                });
+                const cloudinaryData = await cloudinaryResponse.json();
+                thumbnailUrl = cloudinaryData.secure_url;
+            } catch (error) {
+                console.error('Error uploading thumbnail:', error);
+                alert('썸네일 업로드 중 오류가 발생했습니다.');
+                return;
+            }
         }
-        
+
+        const postData = {
+            title,
+            author,
+            content,
+            tag,
+            thumbnail: thumbnailUrl
+        };
+
+        const endpoint = isEditMode ? '/.netlify/functions/update-post' : '/.netlify/functions/add-post';
+        const bodyData = isEditMode ? { id: parseInt(editId), ...postData } : postData;
+
         try {
-            const response = await fetch(url, {
+            const response = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(bodyData)
             });
 
+            const message = isEditMode ? '글이 성공적으로 수정되었습니다!' : '글이 성공적으로 발행되었습니다!';
+            
             if (response.ok) {
                 alert(message);
-                window.location.href = `post.html?id=${isEditMode ? editId : newPostData.id}`;
+                // ✅ 수정: 글 발행 후 archive.html의 'recent' 탭으로 이동하도록 변경
+                window.location.href = `archive.html?tab=recent`; 
             } else {
                 const error = await response.json();
                 alert(`작업 실패: ${error.message}`);
                 console.error('Error:', error);
             }
         } catch (error) {
-            alert('네트워크 오류가 발생했습니다.');
-            console.error('Network error:', error);
-        }
-    });
-
-    toolbarButtons.forEach(button => {
-        button.addEventListener('click', (e) => {
-            e.preventDefault();
-            const command = e.currentTarget.dataset.command;
-            if (command === 'createLink') {
-                const url = prompt('링크 주소를 입력하세요:', 'http://');
-                if (url) {
-                    document.execCommand(command, false, url);
-                }
-            } else {
-                document.execCommand(command, false, null);
-            }
-        });
-    });
-
-    insertImageBtn.addEventListener('click', () => {
-        imageInput.click();
-    });
-
-    imageInput.addEventListener('change', (event) => {
-        const file = event.target.files && event.target.files.length > 0 ? event.target.files[0] : null;
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const img = `<img src="${reader.result}" style="max-width: 100%;">`;
-                document.execCommand('insertHTML', false, img);
-                if (!firstImageThumbnail) {
-                    firstImageThumbnail = reader.result;
-                }
-            };
-            reader.readAsDataURL(file);
-            imageInput.value = '';
+            alert(`작업 실패: ${error.message}`);
+            console.error('Error:', error);
         }
     });
 });
