@@ -10,7 +10,7 @@ header {
 h1 { text-align: center; margin: 0 0 1rem 0; }
 .tabs { display: flex; justify-content: space-around; margin-bottom: 1rem; }
 .tabs a { text-decoration: none; color: #888; padding: 0.5rem; }
-.tabs a.active { color: black; border-bottom: 2px solid black; font-weight: bold; }
+.tabs a.active { color: #ffffff; border-bottom: 2px solid #ffffff; font-weight: bold; }
 
 .search-box {
     position: relative;
@@ -149,8 +149,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; }
     font-size: 1rem;
     padding: 0;
     text-align: left;
-    
-    margin-left: -0.05rem;
+    letter-spacing: -0.02rem; /* ✅ 살짝 좁혀서 들뜬 느낌 줄이기 */
 }
 
 
@@ -160,7 +159,6 @@ h1 { text-align: center; margin: 0 0 1rem 0; }
     color: #555;
     padding: 0; /* 패딩 제거 */
     text-align: left;
-    
 }
 
 .tag {
@@ -187,7 +185,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; }
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background-color: black;
+    background-color: #f4b8cf;
     color: white;
     font-size: 2.5rem;
     text-align: center;
@@ -265,6 +263,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; }
     font-size: 1.2rem;
     line-height: 1.4;
     margin-bottom: 1.5rem;
+    color: #ffffff;
 }
 
 /* 기존 .password-input, .login-btn, .error-message 스타일은 그대로 사용 */
@@ -280,7 +279,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; }
 .login-btn {
     width: 100%;
     padding: 0.75rem;
-    background-color: black;
+    background-color: #f4b8cf;
     color: white;
     border: none;
     border-radius: 8px;
