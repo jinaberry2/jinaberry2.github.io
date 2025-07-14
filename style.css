@@ -7,7 +7,7 @@ header {
     background-color: white; padding: 1rem; border-bottom: 1px solid #ddd;
     position: sticky; top: 0; z-index: 10;
 }
-h1 { text-align: center; margin: 0 0 1rem 0; }
+h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
 .tabs { display: flex; justify-content: space-around; margin-bottom: 1rem; }
 .tabs a { text-decoration: none; color: #888; padding: 0.5rem; }
 .tabs a.active { color: #5c4534; border-bottom: 2px solid #e63e6d; font-weight: bold; }
