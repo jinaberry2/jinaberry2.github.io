@@ -395,6 +395,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // ✅ 페이지 로드 시 URL 파라미터를 확인하여 탭을 변경하는 함수
+    function checkUrlAndSetTab() {
+        const params = new URLSearchParams(window.location.search);
+        const tabFromUrl = params.get('tab');
+        if (tabFromUrl) {
+            tabButtons.forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.dataset.tab === tabFromUrl) {
+                    btn.classList.add('active');
+                    currentTab = tabFromUrl;
+                }
+            });
+        }
+    }
+
     function setupEventListeners() {
       tabButtons.forEach(button => {
         button.addEventListener('click', (e) => {
@@ -475,6 +490,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
     
+    checkUrlAndSetTab();
     fetchPostsAndRender();
     fetchRecentViews();
     setupEventListeners();
