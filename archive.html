@@ -43,19 +43,18 @@
 
     <main id="post-list-container">
     </main>
+
+    <div id="pagination-container" class="pagination-container"></div>
     
-    <!-- '+' 버튼의 href 속성을 제거하여 JavaScript로 제어하도록 변경 -->
     <a href="#" id="add-post-btn">+</a>
 
     <div id="bulk-delete-bar" class="bulk-delete-bar" style="display: none;">
         <button id="bulk-delete-btn" class="bulk-delete-btn">일괄 삭제 (0)</button>
     </div>
 
-    <!-- ✅ 새롭게 추가된 비밀번호 입력 모달 -->
     <div id="password-modal-overlay" class="password-modal-overlay">
         <div class="password-modal-container">
             <button id="close-modal-btn" class="close-modal-btn">&times;</button>
-            <!-- ✅ 모달 제목에 줄 바꿈 추가 -->
             <h1>글 작성을 위해<br>비밀번호를 입력하세요</h1>
             <input type="password" id="modal-password-input" class="password-input" placeholder="비밀번호">
             <button id="modal-login-btn" class="login-btn">확인</button>
