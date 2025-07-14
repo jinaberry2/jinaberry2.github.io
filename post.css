@@ -84,7 +84,7 @@ body {
     transform: translateY(-100%);
 }
 .header-back-btn {
-    font-size: 1.5rem; color: #333; text-decoration: none; flex-basis: 50px;
+    font-size: 1.5rem; color: #5c4534; text-decoration: none; flex-basis: 50px;
 }
 .header-post-title {
     font-size: 1rem; margin: 0; text-align: center;
@@ -103,7 +103,7 @@ body {
     cursor: pointer;
     padding: 0;
     line-height: 1;
-    color: #3e2a2a; /* 점 세 개 버튼 색상을 변경 */
+    color: #5c4534; /* 점 세 개 버튼 색상을 변경 */
 }
 .options-menu {
     position: absolute;
@@ -170,6 +170,7 @@ body {
     border-radius: 4px;
     text-decoration: none; transition: background-color 0.2s;
 }
+.nav-btn { color: #5c4534; }
 .action-btn { display: flex; align-items: center; gap: 0.3rem; }
 .action-btn .icon {
     font-size: 1.2rem;
