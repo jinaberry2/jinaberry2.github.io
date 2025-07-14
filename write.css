@@ -48,6 +48,23 @@ body {
     border-radius: 99px;
     border: none;
     cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.publish-btn:hover {
+    background-color: #f2a7c4;
+}
+.temp-save-btn {
+    background-color: #e9ecef;
+    color: #495057;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.temp-save-btn:hover {
+    background-color: #dee2e6;
 }
 
 /* --- 본문 컨테이너 --- */
@@ -73,7 +90,7 @@ body {
     background-color: white;
     border: none; /* 모든 테두리 제거 */
     border-radius: 0; /* 모서리 둥글게 제거 */
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 1rem; /* 데스크톱 기본 패딩 */
     display: flex;
     justify-content: center;
     align-items: center;
@@ -168,19 +185,22 @@ body {
         overflow-x: auto;
         flex-wrap: nowrap;
         justify-content: flex-start;
-        padding: 0; /* 수정: 모바일에서 툴바 자체의 패딩을 0으로 설정 */
+        /* 툴바 자체의 수직 패딩은 유지하고, 좌우 패딩을 1.5rem으로 설정하여 시각적 크기 확보 */
+        padding: 0.5rem 1.5rem;
         -webkit-overflow-scrolling: touch; /* iOS에서 부드러운 스크롤 */
     }
-.editor-toolbar::-webkit-scrollbar {
-    display: none; /* 스크롤바 숨김 (선택 사항) */
-  }
+
     .toolbar-wrapper {
         display: flex;
         flex-wrap: nowrap;
         gap: 0.5rem;
         min-width: max-content; /* 내부 콘텐츠가 넘칠 수 있게 */
-        padding-left: 1.5rem; /* 추가: 툴바 래퍼에 좌측 패딩 적용 */
-        padding-right: 1.5rem; /* 추가: 툴바 래퍼에 우측 패딩 적용 */
+        /* 툴바의 패딩을 상쇄하기 위해 음수 마진 적용 */
+        margin-left: -1.5rem;
+        margin-right: -1.5rem;
+        /* 콘텐츠 자체의 좌우 여백을 위해 패딩 다시 적용 */
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
     }
 
     .toolbar-left,
@@ -190,3 +210,4 @@ body {
         gap: 0.5rem;
         flex-shrink: 0;
     }
+}
