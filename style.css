@@ -291,9 +291,9 @@ h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
 .error-message {
     color: #ff3b30;
     font-size: 0.9rem;
-    margin-top: 2rem;
+    margin-top: 1.7rem;
     visibility: hidden;
-    margin-bottom: -2rem;
+    margin-bottom: -0.2rem;
 }
 
 .close-modal-btn {
