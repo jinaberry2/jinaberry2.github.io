@@ -169,7 +169,7 @@ body {
     flex-wrap: nowrap; /* 요소들이 다음 줄로 넘어가지 않게 함 */
     justify-content: flex-start; /* 좌측 정렬하여 스크롤하기 좋게 만듦 */
     padding-left: 1.5rem; /* 헤더와 동일한 좌측 패딩 */
-    padding-right: -1.5rem; /* 헤더와 동일한 우측 패딩 */
+    padding-right: 5rem; /* 헤더와 동일한 우측 패딩 */
   }
   .editor-toolbar::-webkit-scrollbar {
     display: none; /* 스크롤바 숨김 (선택 사항) */
