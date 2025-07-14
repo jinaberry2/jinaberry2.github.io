@@ -103,7 +103,7 @@ body {
     cursor: pointer;
     padding: 0;
     line-height: 1;
-    color: #ffffff; /* 점 세 개 버튼 색상을 흰색으로 명시 */
+    color: #3e2a2a; /* 점 세 개 버튼 색상을 변경 */
 }
 .options-menu {
     position: absolute;
