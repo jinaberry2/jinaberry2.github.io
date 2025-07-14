@@ -252,17 +252,4 @@ body {
     }
     .editor-toolbar .toolbar-group:last-child {
         margin-right: 1rem; /* 마지막 그룹에 오른쪽 여백 추가 (제거된 padding-right 보완) */
-    }
-    .write-container {
-        padding: 8rem 1rem 3rem 1rem; /* 모바일 패딩 조정 */
-    }
-    .title-input {
-        font-size: 2rem;
-    }
-    .author-input {
-        font-size: 1rem;
-    }
-    .editable-area {
-        font-size: 1rem;
-    }
 }
