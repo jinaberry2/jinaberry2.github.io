@@ -306,3 +306,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
     cursor: pointer;
     color: #888;
 }
+
+#post-list-container {
+    padding-top: 7rem; /* ✅ 이 값을 늘리면 로딩 메시지 위치가 더 아래로 내려갑니다. */
+}
