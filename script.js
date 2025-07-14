@@ -389,7 +389,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const enteredPassword = modalPasswordInput.value;
         if (enteredPassword === CORRECT_PASSWORD) {
             hidePasswordModal();
-            window.location.href = 'write.html'; // 비밀번호 일치 시 글쓰기 페이지로 이동
+            window.location.href = 'write.html?tab=${currentTab}'; // 비밀번호 일치 시 글쓰기 페이지로 이동  // 변경된 코드
         } else {
             modalErrorMessage.style.visibility = 'visible'; // 에러 메시지 표시
         }
