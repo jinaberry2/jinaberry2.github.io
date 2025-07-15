@@ -8,6 +8,19 @@ header {
     background-color: white; padding: 1rem; border-bottom: 1px solid #ddd;
     position: sticky; top: 0; z-index: 10;
 }
+.header-logo {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 3rem;
+    margin: 0 0 1rem 0;
+}
+
+.header-logo img {
+    height: 100%;
+    width: auto;
+}
+
 h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
 .tabs { display: flex; justify-content: space-around; margin-bottom: 1rem; }
 .tabs a { text-decoration: none; color: #888; padding: 0.5rem; }
