@@ -138,5 +138,15 @@
     "views": 6,
     "status": "deleted",
     "deletedTimestamp": 1752538706131
+  },
+  {
+    "title": "유님 안녕하세요",
+    "author": "당고",
+    "content": "잘보이나염?",
+    "timestamp": 1752570047852,
+    "thumbnail": null,
+    "id": 1752570049077,
+    "liked": false,
+    "views": 0
   }
 ]
