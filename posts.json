@@ -135,6 +135,8 @@
     "thumbnail": null,
     "id": 1752535689683,
     "liked": false,
-    "views": 4
+    "views": 4,
+    "status": "deleted",
+    "deletedTimestamp": 1752538706131
   }
 ]
