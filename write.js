@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
- const sourceTab = params.get('tab');
+    const sourceTab = params.get('tab');
     const publishBtn = document.getElementById('publish-btn');
     const postTitleInput = document.getElementById('post-title');
     const postAuthorInput = document.getElementById('post-author');
@@ -74,13 +74,19 @@ document.addEventListener('DOMContentLoaded', async () => {
             alert('제목과 내용을 입력해주세요.');
             return;
         }
+        
+        // Find the first image in the new content
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = content;
+        const firstImg = tempDiv.querySelector('img');
+        const newThumbnail = firstImg ? firstImg.src : null; // 새로운 썸네일 경로를 동적으로 결정
 
         const newPostData = {
             title: title,
             author: author,
             content: content,
             timestamp: Date.now(),
-            thumbnail: firstImageThumbnail,
+            thumbnail: newThumbnail, // 동적으로 결정된 썸네일 사용
         };
         
         let url = ADD_POST_URL;
