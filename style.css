@@ -340,7 +340,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
 /* 활성화된 페이지 버튼 스타일 */
 .page-btn.active {
     background-color: transparent; /* 활성화 시에도 배경 투명 */
-    color: #f4b8cf; /* 활성화된 페이지 버튼의 글자색 (숫자/화살표 색) */
+    color: #e63e6d; /* 활성화된 페이지 버튼의 글자색 (숫자/화살표 색) */
     border: none; /* 활성화 시에도 테두리 제거 */
     font-weight: bold;
 }
@@ -348,7 +348,7 @@ h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
 /* 호버 효과 */
 .page-btn:not(.active):hover:not(.disabled) {
     background-color: transparent; /* 호버 시에도 배경 투명 */
-    color: #e63e6d; /* 호버 시 글자색 변경 (좀 더 진하게) */
+    color: #f4b8cf; /* 호버 시 글자색 변경 (좀 더 진하게) */
 }
 
 /* 비활성화된 버튼 스타일 */
