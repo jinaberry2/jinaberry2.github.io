@@ -136,5 +136,15 @@
     "id": 1752572480777,
     "liked": false,
     "views": 5
+  },
+  {
+    "title": "터미널",
+    "author": "지나",
+    "content": "cd /Users/jina/Downloads/jinaberry2.github.io-main/blue-marble-game<div><br></div><div>npm run build<br></div><div><br></div><div>firebase deploy --only hosting<br></div>",
+    "timestamp": 1752748789279,
+    "thumbnail": null,
+    "id": 1752748790599,
+    "liked": false,
+    "views": 0
   }
 ]
