@@ -481,8 +481,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        try {
-            const response = await fetch('./netlify/functions/create-series.js', {
+       try {
+            // ✅ 이 부분을 수정했습니다.
+            const response = await fetch('/.netlify/functions/create-series', { 
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: seriesName })
