@@ -621,4 +621,28 @@ document.addEventListener('DOMContentLoaded', async () => {
             showPasswordModal();
       });
       modalLoginBtn.addEventListener('click', handleModalLogin);
-      modalPassword
+      modalPasswordInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                handleModalLogin();
+            }
+      });
+      closeModalBtn.addEventListener('click', hidePasswordModal);
+      passwordModalOverlay.addEventListener('click', (e) => {
+            if (e.target === passwordModalOverlay) {
+                hidePasswordModal();
+            }
+      });
+
+      addSeriesBtn.addEventListener('click', showCreateSeriesModal);
+      cancelCreateSeriesBtn.addEventListener('click', hideCreateSeriesModal);
+      confirmCreateSeriesBtn.addEventListener('click', handleCreateSeries);
+
+      editSeriesBtn.addEventListener('click', showAddToSeriesModal);
+      cancelAddToSeriesBtn.addEventListener('click', hideAddToSeriesModal);
+      confirmAddToSeriesBtn.addEventListener('click', handleAddToSeries);
+    }
+    
+    await initializeTab();
+    await fetchAllData();
+    setupEventListeners();
+});
