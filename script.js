@@ -2,15 +2,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
-    let allSeries = []; // 시리즈 데이터를 저장할 배열
-    let currentSeries = null; // 현재 보고 있는 시리즈
+    let allSeries = [];
+    let currentSeries = null;
     let recentViews = [];
     let currentSort = 'newest';
     let isSelectionMode = false;
     let selectedPostIds = [];
     let isLoadingPosts = true;
 
-    // ✅ Pagination variables
     const POSTS_PER_PAGE = 10;
     let currentPage = 1;
     let totalPages = 1;
@@ -28,7 +27,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addPostBtn = document.getElementById('add-post-btn');
     const bulkDeleteBar = document.getElementById('bulk-delete-bar');
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
-    // 시리즈 관련 버튼 및 모달
     const addSeriesBtn = document.getElementById('add-series-btn');
     const editSeriesBtn = document.getElementById('edit-series-btn');
     const createSeriesModal = document.getElementById('create-series-modal');
@@ -41,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const confirmAddToSeriesBtn = document.getElementById('confirm-add-to-series-btn');
     const addSeriesBtnContainer = document.getElementById('series-add-btn-container');
     const editSeriesBtnContainer = document.getElementById('series-edit-btn-container');
-
 
     const paginationContainer = document.getElementById('pagination-container');
     const passwordModalOverlay = document.getElementById('password-modal-overlay');
@@ -153,12 +150,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         await showCustomAlert(`${deletedCount}개의 글이 영구 삭제되었습니다.`);
         toggleSelectionMode();
-        await fetchPostsAndRender();
+        await fetchAllData();
     }
-    
-    // 이 함수는 시리즈와 포스트 목록을 렌더링하는 핵심 함수입니다.
+
     function renderPosts() {
-        // 기존 탭 관련 버튼 가시성 설정
         const isSeriesTab = currentTab === 'series';
         selectBtn.style.display = isSeriesTab ? 'none' : (currentTab === 'deleted' ? 'block' : 'none');
         addPostBtn.style.display = isSeriesTab ? 'none' : 'block';
@@ -238,16 +233,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
                 postListContainer.appendChild(seriesItem);
             });
-            paginationContainer.innerHTML = ''; // 시리즈 탭에서는 페이지네이션 숨김
+            paginationContainer.innerHTML = '';
             return;
         }
 
-        // 기존 포스트 렌더링 로직
         const purchasedPosts = allPosts.filter(p => p.status !== 'deleted');
         const deletedPosts = allPosts.filter(p => p.status === 'deleted');
 
         let postsToRender = [];
-        // ... (기존 탭별 로직)
         if (currentTab === 'purchased') {
             postsToRender = purchasedPosts;
         } else if (currentTab === 'liked') {
@@ -314,10 +307,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
-    // 시리즈 내의 포스트 목록을 렌더링하는 함수
     function renderSeriesPosts(series) {
         const seriesPosts = allPosts.filter(post => series.postIds.includes(post.id));
-        seriesPosts.sort((a, b) => b.timestamp - a.timestamp); // 최신순 정렬
+        seriesPosts.sort((a, b) => b.timestamp - a.timestamp);
 
         postListContainer.innerHTML = `
             <div class="series-header">
@@ -340,7 +332,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.innerHTML = '';
     }
 
-    // 포스트 아이템을 생성하는 함수
     function createPostElement(post, isSelectionMode) {
         const linkElement = document.createElement('a');
         linkElement.href = `post.html?id=${post.id}&tab=${currentTab}`;
@@ -438,7 +429,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.appendChild(nextBlockBtn);
     }
     
-    // 포스트와 시리즈 데이터를 함께 불러오는 함수
     async function fetchAllData() {
         isLoadingPosts = true;
         renderPosts();
@@ -449,8 +439,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             allPosts = await postsResponse.json();
 
             const seriesResponse = await fetch('/.netlify/functions/get-series');
-            if (!seriesResponse.ok) throw new Error('Failed to fetch series.');
-            allSeries = await seriesResponse.json();
+            if (!seriesResponse.ok) {
+                console.warn('Failed to fetch series data. Serverless function may not be deployed. Initializing with empty array.');
+                allSeries = [];
+            } else {
+                allSeries = await seriesResponse.json();
+            }
 
             await fetchRecentViews();
         } catch (error) {
@@ -477,7 +471,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 모달 관련 함수
     function showPasswordModal() {
         passwordModalOverlay.classList.add('visible');
         modalPasswordInput.value = '';
@@ -497,7 +490,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 새로운 시리즈 생성 모달 함수
     function showCreateSeriesModal() {
         createSeriesModal.style.display = 'flex';
         newSeriesNameInput.value = '';
@@ -513,7 +505,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            // 서버에 시리즈 생성 요청
             const response = await fetch('/.netlify/functions/create-series', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -530,7 +521,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 시리즈에 글 추가/삭제 모달 함수
     function showAddToSeriesModal() {
         postSelectionList.innerHTML = '';
         const allPostList = allPosts.filter(p => p.status !== 'deleted');
@@ -575,7 +565,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 이벤트 리스너 설정
     function setupEventListeners() {
       tabButtons.forEach(button => {
         button.addEventListener('click', async (e) => {
@@ -586,7 +575,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             currentSort = 'newest';
             sortText.textContent = '최신순';
             currentPage = 1;
-            currentSeries = null; // 탭 변경 시 시리즈 선택 초기화
+            currentSeries = null;
             renderPosts();
         });
       });
@@ -632,29 +621,4 @@ document.addEventListener('DOMContentLoaded', async () => {
             showPasswordModal();
       });
       modalLoginBtn.addEventListener('click', handleModalLogin);
-      modalPasswordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleModalLogin();
-            }
-      });
-      closeModalBtn.addEventListener('click', hidePasswordModal);
-      passwordModalOverlay.addEventListener('click', (e) => {
-            if (e.target === passwordModalOverlay) {
-                hidePasswordModal();
-            }
-      });
-
-      // 시리즈 관련 이벤트 리스너 추가
-      addSeriesBtn.addEventListener('click', showCreateSeriesModal);
-      cancelCreateSeriesBtn.addEventListener('click', hideCreateSeriesModal);
-      confirmCreateSeriesBtn.addEventListener('click', handleCreateSeries);
-
-      editSeriesBtn.addEventListener('click', showAddToSeriesModal);
-      cancelAddToSeriesBtn.addEventListener('click', hideAddToSeriesModal);
-      confirmAddToSeriesBtn.addEventListener('click', handleAddToSeries);
-    }
-    
-    await initializeTab();
-    await fetchAllData();
-    setupEventListeners();
-});
+      modalPassword
