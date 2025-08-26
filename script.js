@@ -402,9 +402,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const [postsResponse, viewsResponse, seriesResponse] = await Promise.all([
-                fetch('/.netlify/functions/get-posts'),
-                fetch('/.netlify/functions/get-recent-views'),
-                fetch('/.netlify/functions/get-series')
+                fetch('posts.json'),
+                fetch('recent-views.json'),
+                fetch('netlify/functions/series.json')
             ]);
             
             if (!postsResponse.ok) throw new Error('Failed to fetch posts.');
