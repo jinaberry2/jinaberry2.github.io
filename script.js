@@ -482,7 +482,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         try {
-            const response = await fetch('/.netlify/functions/create-series', {
+            const response = await fetch('./netlify/functions/create-series.js', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: seriesName })
@@ -521,7 +521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .map(input => parseInt(input.dataset.id));
         
         try {
-            const response = await fetch('/.netlify/functions/update-series', {
+            const response = await fetch('./netlify/functions/update-series.js', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ seriesId: currentSeries.id, postIds: selectedIds })
