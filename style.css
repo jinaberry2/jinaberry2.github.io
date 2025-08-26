@@ -375,3 +375,29 @@ h1 { text-align: center; margin: 0 0 1rem 0; color: #5c4534; }
     font-weight: bold;
     font-size: 1rem;
 }
+
+/* archive.html에 있는 add-series-btn 스타일 수정 */
+#series-add-btn-container {
+    position: fixed;
+    bottom: 2rem;
+    right: 2rem;
+    z-index: 10;
+}
+#add-series-btn {
+    /* ✅ add-post-btn과 동일한 스타일을 사용하지만, 둥근 모양을 제거 */
+    width: auto;
+    height: auto;
+    border-radius: 8px; /* 둥근 모서리 */
+    padding: 0.75rem 1.5rem; /* 버튼 크기 조절 */
+    font-size: 1rem;
+    text-align: center;
+    line-height: 1;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    background-color: #f4b8cf;
+    color: white;
+    font-weight: bold;
+}
