@@ -253,7 +253,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         totalPages = Math.ceil(postsToRender.length / POSTS_PER_PAGE);
         currentPage = Math.min(currentPage, totalPages);
-        
+
         const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
         const endIndex = startIndex + POSTS_PER_PAGE;
         const pagedPosts = postsToRender.slice(startIndex, endIndex);
@@ -395,7 +395,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         paginationContainer.appendChild(nextBlockBtn);
     }
-    
+
     async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fetch('recent-views.json'),
                 fetch('netlify/functions/series.json')
             ]);
-            
+
             if (!postsResponse.ok) throw new Error('Failed to fetch posts.');
             if (!viewsResponse.ok) throw new Error('Failed to fetch recent views.');
             if (!seriesResponse.ok) throw new Error('Failed to fetch series.');
@@ -426,7 +426,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderPosts();
         }
     }
-    
+
     function showPasswordModal() {
         passwordModalOverlay.classList.add('visible');
         modalPasswordInput.value = '';
@@ -470,37 +470,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function createSeries() {
-        const seriesName = newSeriesNameInput.value.trim();
-        if (!seriesName) {
-            await showCustomAlert('시리즈명을 입력해주세요.');
-            return;
-        }
+      const seriesName = newSeriesNameInput.value.trim();
+      if (!seriesName) {
+          await showCustomAlert('시리즈명을 입력해주세요.');
+          return;
+      }
 
-        if (allSeries.some(s => s.name === seriesName)) {
-            await showCustomAlert('이미 존재하는 시리즈명입니다.');
-            return;
-        }
+      if (allSeries.some(s => s.name === seriesName)) {
+          await showCustomAlert('이미 존재하는 시리즈명입니다.');
+          return;
+      }
 
-       try {
-            // ✅ 이 부분을 수정했습니다.
-            const response = await fetch('/.netlify/functions/create-series', { 
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: seriesName })
-            });
+      try {
+          // ✅ 이 부분을 수정했습니다.
+          const response = await fetch('/.netlify/functions/create-series', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ name: seriesName })
+          });
 
-            if (!response.ok) {
-                throw new Error('시리즈 생성 실패.');
-            }
+          if (!response.ok) {
+              throw new Error('시리즈 생성 실패.');
+          }
 
-            await fetchPostsAndRender();
-            createSeriesModal.style.display = 'none';
-            await showCustomAlert('시리즈가 생성되었습니다.');
-        } catch (error) {
-            console.error("Error creating series:", error);
-            await showCustomAlert('시리즈 생성 중 오류가 발생했습니다.');
-        }
-    }
+          await fetchPostsAndRender();
+          createSeriesModal.style.display = 'none';
+          await showCustomAlert('시리즈가 생성되었습니다.');
+      } catch (error) {
+          console.error("Error creating series:", error);
+          await showCustomAlert('시리즈 생성 중 오류가 발생했습니다.');
+      }
+  }
 
     function renderPostSelectionList() {
         postSelectionList.innerHTML = '';
@@ -520,7 +520,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     async function saveSeriesPosts() {
         const selectedIds = Array.from(postSelectionList.querySelectorAll('input:checked'))
             .map(input => parseInt(input.dataset.id));
-        
+
         try {
             const response = await fetch('./netlify/functions/update-series.js', {
                 method: 'POST',
@@ -639,7 +639,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       confirmAddToSeriesBtn.addEventListener('click', saveSeriesPosts);
 
     }
-    
+
     await initializeTab();
     await fetchPostsAndRender();
     setupEventListeners();
