@@ -1,4 +1,4 @@
-document.addEventListener('DOMContentLoaded', async () => {
+fetch('/.netlify/functions/get-series')document.addEventListener('DOMContentLoaded', async () => {
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
@@ -404,7 +404,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const [postsResponse, viewsResponse, seriesResponse] = await Promise.all([
                 fetch('posts.json'),
                 fetch('recent-views.json'),
-                fetch('/.netlify/functions/get-series') 
+fetch('/.netlify/functions/get-series')
             ]);
 
             if (!postsResponse.ok) throw new Error('Failed to fetch posts.');
