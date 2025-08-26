@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             document.getElementById('custom-alert-ok-btn').onclick = () => {
                 document.body.removeChild(alertBox);
-                resolve(); // 확인 버튼 클릭 시 Promise 해결
+                resolve();
             };
         });
     }
@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const fetchPost = async () => {
-      const response = await fetch('/.netlify/functions/get-posts');
+      const response = await fetch('posts.json');
       if (!response.ok) {
         throw new Error('Failed to fetch posts.');
       }
@@ -177,9 +177,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const optionsMenu = document.getElementById('options-menu');
         const deletePostBtn = document.getElementById('delete-post-btn');
         const permanentDeleteBtn = document.getElementById('permanent-delete-btn');
-        const editPostBtn = document.getElementById('edit-post-btn'); // 수정 버튼 추가
+        const editPostBtn = document.getElementById('edit-post-btn');
 
-        // 수정 버튼 이벤트 리스너 추가
         editPostBtn.addEventListener('click', () => {
             window.location.href = `write.html?editId=${post.id}`;
         });
@@ -238,7 +237,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 포스트 삭제 함수 (status를 'deleted'로 변경하는 Netlify Function 호출)
     async function markPostAsDeleted(postIdToMarkDeleted) {
         const confirmResult = await showCustomConfirm('정말로 이 포스트를 삭제 목록으로 이동하시겠습니까?');
         if (!confirmResult) return;
@@ -255,15 +253,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                  throw new Error(errorData.message || 'Failed to mark post as deleted.');
             }
 
-            await showCustomAlert('글이 삭제 목록으로 이동되었습니다.'); // 확인 버튼을 기다리도록 수정
-            window.location.href = 'archive.html?tab=deleted'; // 확인 후 페이지 이동
+            await showCustomAlert('글이 삭제 목록으로 이동되었습니다.');
+            window.location.href = 'archive.html?tab=deleted';
         } catch (error) {
             showCustomAlert(`글을 삭제 목록으로 이동하는 데 실패했습니다: ${error.message}`);
             console.error('글 삭제 실패:', error);
         }
     }
 
-    // 포스트 영구 삭제 함수 (실제 파일에서 삭제하는 Netlify Function 호출)
     async function permanentDeletePost(postIdToPermanentlyDelete) {
         const confirmResult = await showCustomConfirm('이 글을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.');
         if (!confirmResult) return;
@@ -280,8 +277,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error(errorData.message || 'Failed to permanently delete post.');
             }
 
-            await showCustomAlert('글이 영구 삭제되었습니다.'); // 확인 버튼을 기다리도록 수정
-            window.location.href = 'archive.html?tab=deleted'; // 확인 후 페이지 이동
+            await showCustomAlert('글이 영구 삭제되었습니다.');
+            window.location.href = 'archive.html?tab=deleted';
         } catch (error) {
             showCustomAlert(`글을 영구 삭제하는 데 실패했습니다: ${error.message}`);
             console.error('글 영구 삭제 오류:', error);
@@ -339,8 +336,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPost(null);
 
         try {
-            const postsResponse = await fetch('/.netlify/functions/get-posts');
-            const viewsResponse = await fetch('/.netlify/functions/get-recent-views');
+            const postsResponse = await fetch('posts.json');
+            const viewsResponse = await fetch('recent-views.json');
 
             if (!postsResponse.ok || !viewsResponse.ok) {
                 throw new Error('Failed to fetch data.');
