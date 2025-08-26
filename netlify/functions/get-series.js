@@ -17,10 +17,6 @@ exports.handler = async () => {
             ref: GITHUB_BRANCH,
         });
 
-<<<<<<< HEAD
-        // 파일 내용을 Base64에서 UTF-8로 디코딩
-=======
->>>>>>> 9867953 (script.js 파일 전체 수정)
         const seriesData = Buffer.from(fileData.content, 'base64').toString('utf-8');
 
         return {
@@ -30,10 +26,6 @@ exports.handler = async () => {
         };
     } catch (error) {
         if (error.status === 404) {
-<<<<<<< HEAD
-            // 파일이 없으면 빈 배열 반환
-=======
->>>>>>> 9867953 (script.js 파일 전체 수정)
             return {
                 statusCode: 200,
                 body: JSON.stringify([]),
