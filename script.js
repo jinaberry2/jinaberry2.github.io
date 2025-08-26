@@ -521,7 +521,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             .map(input => parseInt(input.dataset.id));
 
         try {
+<<<<<<< HEAD
             const response = await fetch('./netlify/functions/update-series.js', {
+=======
+            const response = await fetch('/.netlify/functions/update-series', {
+>>>>>>> 9867953 (script.js 파일 전체 수정)
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ seriesId: currentSeries.id, postIds: selectedIds })
