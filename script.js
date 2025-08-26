@@ -1,4 +1,4 @@
-fetch('/.netlify/functions/get-series')document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', async () => {
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
@@ -404,7 +404,7 @@ fetch('/.netlify/functions/get-series')document.addEventListener('DOMContentLoad
             const [postsResponse, viewsResponse, seriesResponse] = await Promise.all([
                 fetch('posts.json'),
                 fetch('recent-views.json'),
-fetch('/.netlify/functions/get-series')
+                fetch('/.netlify/functions/get-series')
             ]);
 
             if (!postsResponse.ok) throw new Error('Failed to fetch posts.');
@@ -470,37 +470,36 @@ fetch('/.netlify/functions/get-series')
     }
 
     async function createSeries() {
-      const seriesName = newSeriesNameInput.value.trim();
-      if (!seriesName) {
-          await showCustomAlert('시리즈명을 입력해주세요.');
-          return;
-      }
+        const seriesName = newSeriesNameInput.value.trim();
+        if (!seriesName) {
+            await showCustomAlert('시리즈명을 입력해주세요.');
+            return;
+        }
 
-      if (allSeries.some(s => s.name === seriesName)) {
-          await showCustomAlert('이미 존재하는 시리즈명입니다.');
-          return;
-      }
+        if (allSeries.some(s => s.name === seriesName)) {
+            await showCustomAlert('이미 존재하는 시리즈명입니다.');
+            return;
+        }
 
-      try {
-          // ✅ 이 부분을 수정했습니다.
-          const response = await fetch('/.netlify/functions/create-series', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ name: seriesName })
-          });
+        try {
+            const response = await fetch('/.netlify/functions/create-series', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: seriesName })
+            });
 
-          if (!response.ok) {
-              throw new Error('시리즈 생성 실패.');
-          }
+            if (!response.ok) {
+                throw new Error('시리즈 생성 실패.');
+            }
 
-          await fetchPostsAndRender();
-          createSeriesModal.style.display = 'none';
-          await showCustomAlert('시리즈가 생성되었습니다.');
-      } catch (error) {
-          console.error("Error creating series:", error);
-          await showCustomAlert('시리즈 생성 중 오류가 발생했습니다.');
-      }
-  }
+            await fetchPostsAndRender();
+            createSeriesModal.style.display = 'none';
+            await showCustomAlert('시리즈가 생성되었습니다.');
+        } catch (error) {
+            console.error("Error creating series:", error);
+            await showCustomAlert('시리즈 생성 중 오류가 발생했습니다.');
+        }
+    }
 
     function renderPostSelectionList() {
         postSelectionList.innerHTML = '';
@@ -542,101 +541,101 @@ fetch('/.netlify/functions/get-series')
     }
 
     function setupEventListeners() {
-      tabButtons.forEach(button => {
-        button.addEventListener('click', async (e) => {
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            e.currentTarget.classList.add('active');
-            currentTab = e.currentTarget.dataset.tab;
-            localStorage.setItem('lastActiveTab', currentTab);
-            currentSort = 'newest';
-            sortText.textContent = '최신순';
-            currentPage = 1;
-            currentSeries = null;
-            if (currentTab === 'recent') {
-                await fetchRecentViews();
-            }
-            renderPosts();
+        tabButtons.forEach(button => {
+            button.addEventListener('click', async (e) => {
+                tabButtons.forEach(btn => btn.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                currentTab = e.currentTarget.dataset.tab;
+                localStorage.setItem('lastActiveTab', currentTab);
+                currentSort = 'newest';
+                sortText.textContent = '최신순';
+                currentPage = 1;
+                currentSeries = null;
+                if (currentTab === 'recent') {
+                    await fetchRecentViews();
+                }
+                renderPosts();
+            });
         });
-      });
 
-      let searchTimeout;
-      searchInput.addEventListener('input', (e) => {
-        clearTimeout(searchTimeout);
-        searchTimeout = setTimeout(() => {
-            searchTerm = e.target.value;
-            currentPage = 1;
-            renderPosts();
-        }, 300);
-      });
-
-      sortButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        sortOptionsContainer.classList.toggle('active');
-      });
-
-      sortMenu.addEventListener('click', (e) => {
-        if (e.target.classList.contains('sort-option')) {
-            const selectedSort = e.target.dataset.sort;
-            if (currentSort !== selectedSort) {
-                currentSort = selectedSort;
-                sortText.textContent = e.target.textContent;
+        let searchTimeout;
+        searchInput.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                searchTerm = e.target.value;
                 currentPage = 1;
                 renderPosts();
+            }, 300);
+        });
+
+        sortButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            sortOptionsContainer.classList.toggle('active');
+        });
+
+        sortMenu.addEventListener('click', (e) => {
+            if (e.target.classList.contains('sort-option')) {
+                const selectedSort = e.target.dataset.sort;
+                if (currentSort !== selectedSort) {
+                    currentSort = selectedSort;
+                    sortText.textContent = e.target.textContent;
+                    currentPage = 1;
+                    renderPosts();
+                }
+                sortOptionsContainer.classList.remove('active');
             }
-            sortOptionsContainer.classList.remove('active');
-        }
-      });
+        });
 
-      document.addEventListener('click', (e) => {
-        if (!sortOptionsContainer.contains(e.target)) {
-            sortOptionsContainer.classList.remove('active');
-        }
-      });
+        document.addEventListener('click', (e) => {
+            if (!sortOptionsContainer.contains(e.target)) {
+                sortOptionsContainer.classList.remove('active');
+            }
+        });
 
-      selectBtn.addEventListener('click', toggleSelectionMode);
-      bulkDeleteBtn.addEventListener('click', permanentDeleteSelectedPosts);
+        selectBtn.addEventListener('click', toggleSelectionMode);
+        bulkDeleteBtn.addEventListener('click', permanentDeleteSelectedPosts);
 
-      addPostBtn.addEventListener('click', (e) => {
+        addPostBtn.addEventListener('click', (e) => {
             e.preventDefault();
             showPasswordModal();
-      });
+        });
 
-      modalLoginBtn.addEventListener('click', handleModalLogin);
-      modalPasswordInput.addEventListener('keypress', (e) => {
+        modalLoginBtn.addEventListener('click', handleModalLogin);
+        modalPasswordInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 handleModalLogin();
             }
-      });
+        });
 
-      closeModalBtn.addEventListener('click', hidePasswordModal);
-      passwordModalOverlay.addEventListener('click', (e) => {
+        closeModalBtn.addEventListener('click', hidePasswordModal);
+        passwordModalOverlay.addEventListener('click', (e) => {
             if (e.target === passwordModalOverlay) {
                 hidePasswordModal();
             }
-      });
+        });
 
-      addSeriesBtn.addEventListener('click', () => {
-        createSeriesModal.style.display = 'flex';
-        newSeriesNameInput.value = '';
-        newSeriesNameInput.focus();
-      });
+        addSeriesBtn.addEventListener('click', () => {
+            createSeriesModal.style.display = 'flex';
+            newSeriesNameInput.value = '';
+            newSeriesNameInput.focus();
+        });
 
-      cancelCreateSeriesBtn.addEventListener('click', () => {
-        createSeriesModal.style.display = 'none';
-      });
+        cancelCreateSeriesBtn.addEventListener('click', () => {
+            createSeriesModal.style.display = 'none';
+        });
 
-      confirmCreateSeriesBtn.addEventListener('click', createSeries);
+        confirmCreateSeriesBtn.addEventListener('click', createSeries);
 
-      editSeriesBtn.addEventListener('click', () => {
-        renderPostSelectionList();
-        addToSeriesModal.style.display = 'flex';
-      });
+        editSeriesBtn.addEventListener('click', () => {
+            renderPostSelectionList();
+            addToSeriesModal.style.display = 'flex';
+        });
 
-      cancelAddToSeriesBtn.addEventListener('click', () => {
-        addToSeriesModal.style.display = 'none';
-      });
+        cancelAddToSeriesBtn.addEventListener('click', () => {
+            addToSeriesModal.style.display = 'none';
+        });
 
-      confirmAddToSeriesBtn.addEventListener('click', saveSeriesPosts);
+        confirmAddToSeriesBtn.addEventListener('click', saveSeriesPosts);
 
     }
 
