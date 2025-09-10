@@ -63,7 +63,9 @@
     "timestamp": 1752518621527,
     "id": 1752518622745,
     "liked": false,
-    "views": 1
+    "views": 1,
+    "status": "deleted",
+    "deletedTimestamp": 1757480771667
   },
   {
     "title": "ㅇ",
