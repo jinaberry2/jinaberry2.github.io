@@ -109,7 +109,9 @@
     "thumbnail": null,
     "id": 1752534457831,
     "liked": false,
-    "views": 2
+    "views": 2,
+    "status": "deleted",
+    "deletedTimestamp": 1757481003877
   },
   {
     "title": "anjdal",
