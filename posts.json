@@ -52,7 +52,9 @@
     "timestamp": 1752516375367,
     "id": 1752516376497,
     "liked": false,
-    "views": 2
+    "views": 2,
+    "status": "deleted",
+    "deletedTimestamp": 1757480768449
   },
   {
     "title": "d",
