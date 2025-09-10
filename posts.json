@@ -143,7 +143,9 @@
     "id": 1752535093250,
     "liked": true,
     "views": 4,
-    "likedTimestamp": 1752536483135
+    "likedTimestamp": 1752536483135,
+    "status": "deleted",
+    "deletedTimestamp": 1757480808698
   },
   {
     "title": "dks",
