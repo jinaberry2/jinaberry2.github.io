@@ -99,7 +99,9 @@
     "thumbnail": null,
     "id": 1752534440605,
     "liked": false,
-    "views": 1
+    "views": 1,
+    "status": "deleted",
+    "deletedTimestamp": 1757481012494
   },
   {
     "title": "page",
