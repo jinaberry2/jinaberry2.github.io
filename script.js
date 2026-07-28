@@ -130,15 +130,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         let deletedCount = 0;
         
-        // Supabase에서는 한 번의 요청으로 여러 ID를 한 번에 업데이트할 수 있습니다.
         try {
             const { data, error } = await supabaseClient
                 .from('posts')
                 .update({ 
                     status: 'deleted',
-                    deletedTimestamp: Date.now() // 삭제 정렬용 타임스탬프 기록
+                    deletedTimestamp: Date.now()
                 })
-                .in('id', selectedPostIds); // 선택된 모든 id 배열 매칭
+                .in('id', selectedPostIds);
 
             if (error) throw error;
             deletedCount = selectedPostIds.length;
@@ -282,12 +281,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (checkbox) {
-                // Supabase ID 타입에 맞게 고정 (숫자형 또는 문자열형 유연성 보장)
                 if (selectedPostIds.includes(post.id)) {
                     checkbox.checked = true;
                 }
                 checkbox.addEventListener('change', (e) => {
-                    // Supabase 기본 id 형식(숫자)에 매칭
                     const postId = parseInt(e.target.dataset.id) || e.target.dataset.id;
                     if (e.target.checked) {
                         if (!selectedPostIds.includes(postId)) {
@@ -414,21 +411,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.appendChild(nextBlockBtn);
     }
 
-    // 🌟 4. [핵심 교체 파트] Supabase DB 실시간 조회 연동
+    // 🌟 4. [핵심 교체 파트] Supabase DB 실시간 조회 + 기존 깃허브 json 병합 연동
     async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
 
         try {
-            // 1단계: Supabase 'posts' 테이블에서 전체 데이터 조회
-            const { data: postsData, error } = await supabaseClient
+            // 1단계: Supabase 'posts' 테이블에서 새 데이터 조회
+            const { data: supabasePosts, error } = await supabaseClient
                 .from('posts')
                 .select('*');
 
             if (error) throw error;
-            allPosts = postsData || [];
 
-            // 2단계: 최근 본 내역 조회 (기존 로컬 보관용 호환 유지)
+            // 2단계: 기존 깃허브 posts.json에 있던 옛날 데이터 조회
+            let oldPosts = [];
+            try {
+                const oldResponse = await fetch('posts.json?t=' + Date.now());
+                if (oldResponse.ok) {
+                    oldPosts = await oldResponse.json();
+                }
+            } catch (e) {
+                console.warn("기존 posts.json을 로드할 수 없습니다.");
+            }
+
+            // 3단계: 두 데이터 통합 (새 글 + 옛날 글)
+            allPosts = [...(supabasePosts || []), ...oldPosts];
+
+            // 4단계: 최근 본 내역 조회
             try {
                 const viewsResponse = await fetch('recent-views.json?t=' + Date.now());
                 if (viewsResponse.ok) {
@@ -441,7 +451,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
         } catch (error) {
-            console.error("Supabase 데이터 조회 중 치명적 오류 발생:", error);
+            console.error("데이터 조회 중 치명적 오류 발생:", error);
             allPosts = [];
             recentViews = [];
         } finally {
