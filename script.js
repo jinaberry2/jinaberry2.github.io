@@ -284,17 +284,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (selectedPostIds.includes(post.id)) {
                     checkbox.checked = true;
                 }
-                checkbox.addEventListener('change', (e) => {
-                    const postId = parseInt(e.target.dataset.id) || e.target.dataset.id;
-                    if (e.target.checked) {
-                        if (!selectedPostIds.includes(postId)) {
-                            selectedPostIds.push(postId);
-                        }
-                    } else {
-                        selectedPostIds = selectedPostIds.filter(id => id !== postId);
-                    }
-                    updateBulkDeleteBtn();
-                });
+            checkbox.addEventListener('change', (e) => {
+    // dataset에서 가져온 원래의 id를 문자열과 숫자 모두 유연하게 인식하도록 수정
+    const rawId = e.target.dataset.id;
+    const postId = isNaN(rawId) ? rawId : parseInt(rawId, 10);
+    
+    if (e.target.checked) {
+        if (!selectedPostIds.includes(postId)) {
+            selectedPostIds.push(postId);
+        }
+    } else {
+        selectedPostIds = selectedPostIds.filter(id => id !== postId);
+    }
+    updateBulkDeleteBtn();
+});
             }
 
             postListContainer.appendChild(linkElement);
