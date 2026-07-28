@@ -27,11 +27,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
     const paginationContainer = document.getElementById('pagination-container');
 
-    // UI 컨테이너 유지 (에러 방지용)
+    // UI 컨테이너 유지 (에러 방지용 공란 처리)
     const seriesAddBtnContainer = document.getElementById('series-add-btn-container');
     const seriesEditBtnContainer = document.getElementById('series-edit-btn-container');
-    const addSeriesBtn = document.getElementById('add-series-btn');
-    const editSeriesBtn = document.getElementById('edit-series-btn');
 
     const passwordModalOverlay = document.getElementById('password-modal-overlay');
     const modalPasswordInput = document.getElementById('modal-password-input');
@@ -146,8 +144,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fetchPostsAndRender();
     }
 
-   function renderPosts() {
-        // 탭별 버튼 상단 노출 상태 정의
+    function renderPosts() {
         if (currentTab === 'deleted') {
             selectBtn.style.display = 'block';
             addPostBtn.style.display = 'none';
@@ -160,7 +157,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
             if (isSelectionMode) toggleSelectionMode();
             
-            // 시리즈 탭일 경우 전용 렌더러 작동 후 탈출
             renderSeriesPosts();
             return;
         } else {
@@ -177,18 +173,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div style="border: 4px solid rgba(0, 0, 0, 0.1); border-top: 4px solid #333; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite;"></div>
                     <p style="margin-top: 15px; color: #888;">글 목록을 불러오는 중...</p>
                 </div>
-                <style>
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                </style>
             `;
             postCountElement.textContent = '';
             return;
         }
 
-        // 🌟 [수정 및 보완] status가 없거나 'deleted'가 아닌 모든 글을 기본 구매 목록으로 인정합니다.
         const purchasedPosts = allPosts.filter(p => !p.status || p.status !== 'deleted');
         const deletedPosts = allPosts.filter(p => p.status === 'deleted');
 
@@ -218,7 +207,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             );
         }
 
-        // 🌟 [보안 업데이트] 정렬 기준 값이 객체에 누락되었을 때를 대비한 기본값 처리
         let sortKey = 'timestamp';
         if (currentTab === 'deleted') {
             sortKey = 'deletedTimestamp';
@@ -308,129 +296,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
-        const purchasedPosts = allPosts.filter(p => p.status !== 'deleted');
-        const deletedPosts = allPosts.filter(p => p.status === 'deleted');
-
-        let postsToRender = [];
-
-        if (currentTab === 'purchased') {
-            postsToRender = purchasedPosts;
-        } else if (currentTab === 'liked') {
-            postsToRender = purchasedPosts.filter(post => post.liked);
-        } else if (currentTab === 'recent') {
-            const recentPostIds = new Set(recentViews.map(view => view.id));
-            postsToRender = allPosts
-                .filter(post => recentPostIds.has(post.id))
-                .map(post => {
-                    const view = recentViews.find(v => v.id === post.id);
-                    return { ...post, viewedTimestamp: view ? view.timestamp : 0 };
-                })
-                .sort((a, b) => b.viewedTimestamp - a.viewedTimestamp);
-        } else if (currentTab === 'deleted') {
-            postsToRender = deletedPosts;
-        }
-
-        if (searchTerm) {
-            postsToRender = postsToRender.filter(p =>
-                (p.title && p.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                (p.author && p.author.toLowerCase().includes(searchTerm.toLowerCase()))
-            );
-        }
-
-        let sortKey = 'timestamp';
-        if (currentTab === 'deleted') {
-            sortKey = 'deletedTimestamp';
-        } else if (currentTab === 'liked') {
-            sortKey = 'likedTimestamp';
-        } else if (currentTab === 'recent') {
-            sortKey = 'viewedTimestamp';
-        }
-
-        if (currentSort === 'newest') {
-            postsToRender.sort((a, b) => b[sortKey] - a[sortKey]);
-        } else if (currentSort === 'oldest') {
-            postsToRender.sort((a, b) => a[sortKey] - b[sortKey]);
-        }
-
-        totalPages = Math.ceil(postsToRender.length / POSTS_PER_PAGE);
-        currentPage = Math.min(currentPage, totalPages);
-
-        const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
-        const endIndex = startIndex + POSTS_PER_PAGE;
-        const pagedPosts = postsToRender.slice(startIndex, endIndex);
-
-        postCountElement.textContent = `${postsToRender.length}개의 포스트`;
-        postListContainer.innerHTML = '';
-
-        if (pagedPosts.length === 0 && postsToRender.length > 0) {
-            currentPage = 1;
-            renderPosts();
-            return;
-        } else if (postsToRender.length === 0) {
-            postListContainer.innerHTML = '<p style="text-align:center; color:#888; margin-top: 2rem;">표시할 글이 없습니다.</p>';
-        }
-
-        pagedPosts.forEach(post => {
-            const linkElement = document.createElement('a');
-            linkElement.href = `post.html?id=${post.id}&tab=${currentTab}`;
-            linkElement.className = 'post-item-link';
-            const thumbnailHTML = post.thumbnail ? `<img src="${post.thumbnail}" alt="썸네일" class="thumbnail">` : '';
-            const checkboxHTML = isSelectionMode ? `<div class="checkbox-container"><input type="checkbox" class="post-checkbox" data-id="${post.id}"></div>` : '';
-
-            linkElement.innerHTML = `
-                <div class="post-item">
-                    ${checkboxHTML}
-                    <div class="thumbnail-container">${thumbnailHTML}</div>
-                    <div class="post-info">
-                        <h3>${post.title}</h3>
-                        <p>${post.author} · 영구 열람</p>
-                        ${post.tag ? `<span class="tag">${post.tag}</span>` : ''}
-                    </div>
-                </div>`;
-
-            const postItemDiv = linkElement.querySelector('.post-item');
-            const checkbox = postItemDiv ? postItemDiv.querySelector('.post-checkbox') : null;
-
-            if (isSelectionMode) {
-                linkElement.href = '#';
-                if (postItemDiv) {
-                    postItemDiv.addEventListener('click', (e) => {
-                        if (checkbox && e.target !== checkbox) {
-                            checkbox.checked = !checkbox.checked;
-                            checkbox.dispatchEvent(new Event('change'));
-                        }
-                    });
-                }
-            }
-
-            if (checkbox) {
-                if (selectedPostIds.includes(post.id)) {
-                    checkbox.checked = true;
-                }
-                checkbox.addEventListener('change', (e) => {
-                    const postId = parseInt(e.target.dataset.id);
-                    if (e.target.checked) {
-                        if (!selectedPostIds.includes(postId)) {
-                            selectedPostIds.push(postId);
-                        }
-                    } else {
-                        selectedPostIds = selectedPostIds.filter(id => id !== postId);
-                    }
-                    updateBulkDeleteBtn();
-                });
-            }
-
-            postListContainer.appendChild(linkElement);
-        });
-
-        renderPagination();
-    }
-
-    // 🌟 텍스트(seriesName) 기반 자동 시리즈 그룹화 및 토글 렌더러
     function renderSeriesPosts() {
         postListContainer.innerHTML = '';
         
-        // 1. deleted 상태가 아니고, seriesName이 명시된 글들을 수집하여 그룹화
         const seriesMap = {};
         allPosts.forEach(post => {
             if (post.status !== 'deleted' && post.seriesName && post.seriesName.trim() !== "") {
@@ -451,7 +319,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // 2. 각 시리즈 단위로 상자(Box) 엘리먼트 동적 생성
         seriesNames.forEach(name => {
             const postsInSeries = seriesMap[name];
             
@@ -459,20 +326,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             seriesWrapper.className = 'series-wrapper';
             seriesWrapper.style.cssText = "margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff; overflow: hidden;";
 
-            // 시리즈 대가리(헤더) 영역
             const seriesHeader = document.createElement('div');
-            seriesHeader.className = 'series-item'; // 기존 CSS 스타일 유지용 클래스
+            seriesHeader.className = 'series-item';
             seriesHeader.style.cssText = "padding: 15px; cursor: pointer; background: #f9f9f9; border-bottom: 1px solid #eee; display:flex; flex-direction:column; justify-content:center;";
             seriesHeader.innerHTML = `
                 <h4 style="margin: 0; font-size: 1.1rem; font-weight: bold;">${name}</h4>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">총 ${postsInSeries.length}개의 글 (클릭 시 토글)</p>
+                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">총 ${postsInSeries.length}개의 글</p>
             `;
 
-            // 클릭 시 나타날 하위 리스트 본문 영역 (기본 숨김)
             const postListInner = document.createElement('div');
             postListInner.style.cssText = "display: none; padding: 5px 15px; background: #fff;";
 
-            // 해당 시리즈에 묶인 포스트들을 순회하며 링크 추가
             postsInSeries.forEach(post => {
                 const postLink = document.createElement('a');
                 postLink.href = `post.html?id=${post.id}&tab=${currentTab}`;
@@ -481,7 +345,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 postListInner.appendChild(postLink);
             });
 
-            // 펼치기/접기 토글 이벤트 추가
             seriesHeader.addEventListener('click', () => {
                 const isHidden = postListInner.style.display === 'none';
                 postListInner.style.display = isHidden ? 'block' : 'none';
@@ -493,7 +356,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         postCountElement.textContent = `${seriesNames.length}개의 시리즈`;
-        paginationContainer.innerHTML = ''; // 시리즈 메인 화면은 전체 노출이므로 페이징 제거
+        paginationContainer.innerHTML = '';
     }
 
     function renderPagination() {
@@ -541,42 +404,49 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.appendChild(nextBlockBtn);
     }
 
+    // 🌟 [핵심 에러 해결 및 복구] 안전하게 동기화 데이터를 패치하는 로직
     async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
 
         try {
-            // 외부 종속 함수 호출 최소화 및 파일 직접 패치로 안정성 향상
+            // Netlify 함수 대신 정적 posts.json과 recent-views.json을 패치합니다.
             const [postsResponse, viewsResponse] = await Promise.all([
-                fetch('posts.json'),
-                fetch('recent-views.json')
+                fetch('posts.json?t=' + Date.now()), // 🌟 브라우저 캐시 방지 처리
+                fetch('recent-views.json?t=' + Date.now())
             ]);
 
-            if (!postsResponse.ok) throw new Error('Failed to fetch posts.');
-            if (!viewsResponse.ok) throw new Error('Failed to fetch recent views.');
+            if (postsResponse.ok) {
+                allPosts = await postsResponse.json();
+            } else {
+                console.error('posts.json 로드 실패');
+                allPosts = [];
+            }
 
-            allPosts = await postsResponse.json();
-            recentViews = await viewsResponse.json();
+            if (viewsResponse.ok) {
+                recentViews = await viewsResponse.json();
+            } else {
+                recentViews = [];
+            }
 
         } catch (error) {
-            console.error("Error fetching data:", error);
+            console.error("데이터 동기화 중 치명적 오류 발생:", error);
             allPosts = [];
             recentViews = [];
         } finally {
             isLoadingPosts = false;
-            currentPage = 1;
             renderPosts();
         }
     }
 
     async function fetchRecentViews() {
         try {
-            const response = await fetch('recent-views.json');
+            const response = await fetch('recent-views.json?t=' + Date.now());
             if (response.ok) {
                 recentViews = await response.json();
             }
         } catch (e) {
-            console.error("Error updating recent views:", e);
+            console.error("최근 본 내역 갱신 실패:", e);
         }
     }
 
@@ -694,8 +564,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 hidePasswordModal();
             }
         });
-        
-        // 쓸모없어진 기존 수동 매핑 버튼용 리스너는 깔끔하게 에러방지 예외처리로 대체/제거함
     }
 
     await initializeTab();
