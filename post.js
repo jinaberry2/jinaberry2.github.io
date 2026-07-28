@@ -1,4 +1,3 @@
-// post.js
 document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
     const postId = params.get('id');
@@ -11,7 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const postBodyContainer = document.getElementById('post-body');
 
-    // Custom alert function (Promise 반환하도록 수정)
+    // Custom alert function (Promise 반환하도록 유지)
     function showCustomAlert(message) {
         return new Promise(resolve => {
             const alertBox = document.createElement('div');
@@ -35,7 +34,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // Custom confirmation function (Tailwind CSS 클래스 제거 및 기본 스타일 적용)
+    // Custom confirmation function
     function showCustomConfirm(message) {
         return new Promise(resolve => {
             const confirmBox = document.createElement('div');
@@ -66,13 +65,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    const fetchPost = async () => {
-      const response = await fetch('posts.json');
-      if (!response.ok) {
-        throw new Error('Failed to fetch posts.');
-      }
-      const posts = await response.json();
-      return posts.find(p => p.id == postId);
+    // 🌟 [통합 개편] 로컬 파일 조회 구조를 걷어내고 Netlify 서버 함수를 바라보도록 연동[cite: 1]
+    const fetchPostDataFromServer = async () => {
+        const response = await fetch('/.netlify/functions/get-posts');
+        if (!response.ok) {
+            throw new Error('Failed to fetch posts from server.');
+        }
+        const supabasePosts = await response.json();
+
+        // 기존 posts.json 옛날 데이터 백업 병합 유지
+        let oldPosts = [];
+        try {
+            const oldResponse = await fetch('posts.json?t=' + Date.now());
+            if (oldResponse.ok) {
+                oldPosts = await oldResponse.json();
+            }
+        } catch (e) {
+            console.warn("기존 posts.json 데이터를 로드할 수 없습니다.");
+        }
+
+        return [...(supabasePosts || []), ...oldPosts];
     };
 
     const recordView = async (id) => {
@@ -140,26 +152,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupSidePanel(post, sourceTab);
     }
 
+    // 🌟 [서버 연동 교체] update-like 서버 백엔드 명세에 맞춰 JSON 페이로드 정렬 및 토글 처리
     async function toggleLikeStatus(post) {
         const likeBtn = document.getElementById('like-btn');
         const likeIcon = likeBtn.querySelector('.icon');
         const originalLikedStatus = post.liked;
 
+        // UI 상태 먼저 반영
         post.liked = !originalLikedStatus;
         likeBtn.classList.toggle('active', post.liked);
         likeIcon.textContent = '♡';
 
         try {
+            // 주소 및 인자명 매핑 정렬
             const response = await fetch('/.netlify/functions/update-like', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId: post.id, liked: post.liked })
+                body: JSON.stringify({ 
+                    id: post.id, 
+                    liked: post.liked,
+                    likedTimestamp: post.liked ? Date.now() : null
+                })
             });
             if (!response.ok) {
                 throw new Error('Failed to update like status.');
             }
             console.log("Like status updated successfully.");
         } catch (error) {
+            // 실패 시 롤백 처리
             post.liked = originalLikedStatus;
             likeBtn.classList.toggle('active', post.liked);
             likeIcon.textContent = '♡';
@@ -245,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const response = await fetch('/.netlify/functions/update-post-status', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ postId: postIdToMarkDeleted, status: 'deleted', deletedTimestamp: Date.now() })
+                body: JSON.stringify({ ids: [postIdToMarkDeleted], status: 'deleted' })
             });
 
             if (!response.ok) {
@@ -336,15 +356,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPost(null);
 
         try {
-            const postsResponse = await fetch('posts.json');
-            const viewsResponse = await fetch('recent-views.json');
+            // 통합된 함수를 통하여 전체 게시물 통합 데이터를 수신[cite: 1]
+            allPostsData = await fetchPostDataFromServer();
 
-            if (!postsResponse.ok || !viewsResponse.ok) {
-                throw new Error('Failed to fetch data.');
+            // 최근 본 목록 내역 파싱 백업 유지
+            try {
+                const viewsResponse = await fetch('recent-views.json');
+                if (viewsResponse.ok) {
+                    recentViewsData = await viewsResponse.json();
+                }
+            } catch (e) {
+                recentViewsData = [];
             }
-
-            allPostsData = await postsResponse.json();
-            recentViewsData = await viewsResponse.json();
 
             currentPost = allPostsData.find(p => p.id == postId);
         } catch (error) {
