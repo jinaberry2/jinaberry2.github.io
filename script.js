@@ -3,8 +3,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let searchTerm = '';
     let allPosts = [];
     let recentViews = [];
-    let allSeries = [];
-    let currentSeries = null;
     let currentSort = 'newest';
     let isSelectionMode = false;
     let selectedPostIds = [];
@@ -29,18 +27,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
     const paginationContainer = document.getElementById('pagination-container');
 
+    // UI 컨테이너 유지 (에러 방지용)
     const seriesAddBtnContainer = document.getElementById('series-add-btn-container');
     const seriesEditBtnContainer = document.getElementById('series-edit-btn-container');
     const addSeriesBtn = document.getElementById('add-series-btn');
     const editSeriesBtn = document.getElementById('edit-series-btn');
-    const createSeriesModal = document.getElementById('create-series-modal');
-    const newSeriesNameInput = document.getElementById('new-series-name-input');
-    const cancelCreateSeriesBtn = document.getElementById('cancel-create-series-btn');
-    const confirmCreateSeriesBtn = document.getElementById('confirm-create-series-btn');
-    const addToSeriesModal = document.getElementById('add-to-series-modal');
-    const postSelectionList = document.getElementById('post-selection-list');
-    const cancelAddToSeriesBtn = document.getElementById('cancel-add-to-series-btn');
-    const confirmAddToSeriesBtn = document.getElementById('confirm-add-to-series-btn');
 
     const passwordModalOverlay = document.getElementById('password-modal-overlay');
     const modalPasswordInput = document.getElementById('modal-password-input');
@@ -55,8 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const alertBox = document.createElement('div');
             alertBox.style.cssText = `
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                display: flex; align-items: center; justify-content: center;
                 background-color: rgba(0, 0, 0, 0.5); z-index: 5000;
+                display: flex; align-items: center; justify-content: center;
             `;
             alertBox.innerHTML = `
                 <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 300px; width: 90%;">
@@ -78,8 +69,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const confirmBox = document.createElement('div');
             confirmBox.style.cssText = `
                 position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                display: flex; align-items: center; justify-content: center;
                 background-color: rgba(0, 0, 0, 0.5); z-index: 5000;
+                display: flex; align-items: center; justify-content: center;
             `;
             confirmBox.innerHTML = `
                 <div style="background-color: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); text-align: center; max-width: 300px; width: 90%;">
@@ -156,31 +147,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderPosts() {
+        // 탭별 버튼 상단 노출 상태 정의
         if (currentTab === 'deleted') {
             selectBtn.style.display = 'block';
             addPostBtn.style.display = 'none';
-            seriesAddBtnContainer.style.display = 'none';
-            seriesEditBtnContainer.style.display = 'none';
+            if (seriesAddBtnContainer) seriesAddBtnContainer.style.display = 'none';
+            if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
         } else if (currentTab === 'series') {
             selectBtn.style.display = 'none';
             addPostBtn.style.display = 'none';
-            seriesAddBtnContainer.style.display = 'flex';
-            if (currentSeries) {
-                seriesEditBtnContainer.style.display = 'flex';
-            } else {
-                seriesEditBtnContainer.style.display = 'none';
-            }
-            if (isSelectionMode) {
-                toggleSelectionMode();
-            }
+            if (seriesAddBtnContainer) seriesAddBtnContainer.style.display = 'none';
+            if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
+            if (isSelectionMode) toggleSelectionMode();
+            
+            // 🌟 시리즈 탭일 경우 전용 렌더러 작동 후 탈출
+            renderSeriesPosts();
+            return;
         } else {
             selectBtn.style.display = 'none';
             addPostBtn.style.display = 'flex';
-            seriesAddBtnContainer.style.display = 'none';
-            seriesEditBtnContainer.style.display = 'none';
-            if (isSelectionMode) {
-                toggleSelectionMode();
-            }
+            if (seriesAddBtnContainer) seriesAddBtnContainer.style.display = 'none';
+            if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
+            if (isSelectionMode) toggleSelectionMode();
         }
 
         if (isLoadingPosts) {
@@ -220,13 +208,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .sort((a, b) => b.viewedTimestamp - a.viewedTimestamp);
         } else if (currentTab === 'deleted') {
             postsToRender = deletedPosts;
-        } else if (currentTab === 'series') {
-            if (currentSeries) {
-                postsToRender = allPosts.filter(p => p.seriesId === currentSeries.id);
-            } else {
-                renderSeriesPosts();
-                return;
-            }
         }
 
         if (searchTerm) {
@@ -259,7 +240,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const pagedPosts = postsToRender.slice(startIndex, endIndex);
 
         postCountElement.textContent = `${postsToRender.length}개의 포스트`;
-
         postListContainer.innerHTML = '';
 
         if (pagedPosts.length === 0 && postsToRender.length > 0) {
@@ -326,29 +306,74 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
+    // 🌟 텍스트(seriesName) 기반 자동 시리즈 그룹화 및 토글 렌더러
     function renderSeriesPosts() {
-        seriesEditBtnContainer.style.display = 'none';
         postListContainer.innerHTML = '';
-        if (allSeries.length === 0) {
+        
+        // 1. deleted 상태가 아니고, seriesName이 명시된 글들을 수집하여 그룹화
+        const seriesMap = {};
+        allPosts.forEach(post => {
+            if (post.status !== 'deleted' && post.seriesName && post.seriesName.trim() !== "") {
+                const sName = post.seriesName.trim();
+                if (!seriesMap[sName]) {
+                    seriesMap[sName] = [];
+                }
+                seriesMap[sName].push(post);
+            }
+        });
+
+        const seriesNames = Object.keys(seriesMap);
+
+        if (seriesNames.length === 0) {
             postListContainer.innerHTML = '<p style="text-align:center; color:#888; margin-top: 2rem;">생성된 시리즈가 없습니다.</p>';
+            postCountElement.textContent = '0개의 시리즈';
+            paginationContainer.innerHTML = '';
             return;
         }
 
-        allSeries.forEach(series => {
-            const seriesDiv = document.createElement('div');
-            seriesDiv.className = 'series-item';
-            seriesDiv.innerHTML = `
-                <h4>${series.name}</h4>
-                <p>총 ${series.postIds.length}개의 글</p>
+        // 2. 각 시리즈 단위로 상자(Box) 엘리먼트 동적 생성
+        seriesNames.forEach(name => {
+            const postsInSeries = seriesMap[name];
+            
+            const seriesWrapper = document.createElement('div');
+            seriesWrapper.className = 'series-wrapper';
+            seriesWrapper.style.cssText = "margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff; overflow: hidden;";
+
+            // 시리즈 대가리(헤더) 영역
+            const seriesHeader = document.createElement('div');
+            seriesHeader.className = 'series-item'; // 기존 CSS 스타일 유지용 클래스
+            seriesHeader.style.cssText = "padding: 15px; cursor: pointer; background: #f9f9f9; border-bottom: 1px solid #eee; display:flex; flex-direction:column; justify-content:center;";
+            seriesHeader.innerHTML = `
+                <h4 style="margin: 0; font-size: 1.1rem; font-weight: bold;">${name}</h4>
+                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">총 ${postsInSeries.length}개의 글 (클릭 시 토글)</p>
             `;
-            seriesDiv.addEventListener('click', () => {
-                currentSeries = series;
-                renderPosts();
+
+            // 클릭 시 나타날 하위 리스트 본문 영역 (기본 숨김)
+            const postListInner = document.createElement('div');
+            postListInner.style.cssText = "display: none; padding: 5px 15px; background: #fff;";
+
+            // 해당 시리즈에 묶인 포스트들을 순회하며 링크 추가
+            postsInSeries.forEach(post => {
+                const postLink = document.createElement('a');
+                postLink.href = `post.html?id=${post.id}&tab=${currentTab}`;
+                postLink.style.cssText = "display: block; padding: 10px 0; color: #333; text-decoration: none; border-bottom: 1px solid #f5f5f5; font-size: 0.95rem;";
+                postLink.innerHTML = `📄 <span style="font-weight: 500;">${post.title}</span> <small style="color:#888; margin-left:5px;">by ${post.author}</small>`;
+                postListInner.appendChild(postLink);
             });
-            postListContainer.appendChild(seriesDiv);
+
+            // 펼치기/접기 토글 이벤트 추가
+            seriesHeader.addEventListener('click', () => {
+                const isHidden = postListInner.style.display === 'none';
+                postListInner.style.display = isHidden ? 'block' : 'none';
+            });
+
+            seriesWrapper.appendChild(seriesHeader);
+            seriesWrapper.appendChild(postListInner);
+            postListContainer.appendChild(seriesWrapper);
         });
-        postCountElement.textContent = `${allSeries.length}개의 시리즈`;
-        paginationContainer.innerHTML = '';
+
+        postCountElement.textContent = `${seriesNames.length}개의 시리즈`;
+        paginationContainer.innerHTML = ''; // 시리즈 메인 화면은 전체 노출이므로 페이징 제거
     }
 
     function renderPagination() {
@@ -401,29 +426,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPosts();
 
         try {
-            const [postsResponse, viewsResponse, seriesResponse] = await Promise.all([
+            // 외부 종속 함수 호출 최소화 및 파일 직접 패치로 안정성 향상
+            const [postsResponse, viewsResponse] = await Promise.all([
                 fetch('posts.json'),
-                fetch('recent-views.json'),
-                fetch('/.netlify/functions/get-series')
+                fetch('recent-views.json')
             ]);
 
             if (!postsResponse.ok) throw new Error('Failed to fetch posts.');
             if (!viewsResponse.ok) throw new Error('Failed to fetch recent views.');
-            if (!seriesResponse.ok) throw new Error('Failed to fetch series.');
 
             allPosts = await postsResponse.json();
             recentViews = await viewsResponse.json();
-            allSeries = await seriesResponse.json();
 
         } catch (error) {
             console.error("Error fetching data:", error);
             allPosts = [];
             recentViews = [];
-            allSeries = [];
         } finally {
             isLoadingPosts = false;
             currentPage = 1;
             renderPosts();
+        }
+    }
+
+    async function fetchRecentViews() {
+        try {
+            const response = await fetch('recent-views.json');
+            if (response.ok) {
+                recentViews = await response.json();
+            }
+        } catch (e) {
+            console.error("Error updating recent views:", e);
         }
     }
 
@@ -469,77 +502,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    async function createSeries() {
-        const seriesName = newSeriesNameInput.value.trim();
-        if (!seriesName) {
-            await showCustomAlert('시리즈명을 입력해주세요.');
-            return;
-        }
-
-        if (allSeries.some(s => s.name === seriesName)) {
-            await showCustomAlert('이미 존재하는 시리즈명입니다.');
-            return;
-        }
-
-        try {
-            const response = await fetch('/.netlify/functions/create-series', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: seriesName })
-            });
-
-            if (!response.ok) {
-                throw new Error('시리즈 생성 실패.');
-            }
-
-            await fetchPostsAndRender();
-            createSeriesModal.style.display = 'none';
-            await showCustomAlert('시리즈가 생성되었습니다.');
-        } catch (error) {
-            console.error("Error creating series:", error);
-            await showCustomAlert('시리즈 생성 중 오류가 발생했습니다.');
-        }
-    }
-
-    function renderPostSelectionList() {
-        postSelectionList.innerHTML = '';
-        const allPostList = allPosts.filter(p => p.status !== 'deleted');
-        allPostList.forEach(post => {
-            const isSelected = currentSeries.postIds.includes(post.id);
-            const postItem = document.createElement('div');
-            postItem.className = 'post-select-item';
-            postItem.innerHTML = `
-                <input type="checkbox" data-id="${post.id}" ${isSelected ? 'checked' : ''}>
-                <span>${post.title}</span>
-            `;
-            postSelectionList.appendChild(postItem);
-        });
-    }
-
-    async function saveSeriesPosts() {
-        const selectedIds = Array.from(postSelectionList.querySelectorAll('input:checked'))
-            .map(input => parseInt(input.dataset.id));
-
-        try {
-            const response = await fetch('/.netlify/functions/update-series', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ seriesId: currentSeries.id, postIds: selectedIds })
-            });
-
-            if (!response.ok) {
-                throw new Error('시리즈 업데이트 실패.');
-            }
-
-            await fetchPostsAndRender();
-            addToSeriesModal.style.display = 'none';
-            await showCustomAlert('시리즈가 업데이트되었습니다.');
-        } catch (error) {
-            console.error("Error updating series:", error);
-            await showCustomAlert('시리즈 업데이트 중 오류가 발생했습니다.');
-        }
-    }
-
     function setupEventListeners() {
         tabButtons.forEach(button => {
             button.addEventListener('click', async (e) => {
@@ -550,7 +512,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 currentSort = 'newest';
                 sortText.textContent = '최신순';
                 currentPage = 1;
-                currentSeries = null;
                 if (currentTab === 'recent') {
                     await fetchRecentViews();
                 }
@@ -613,30 +574,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 hidePasswordModal();
             }
         });
-
-        addSeriesBtn.addEventListener('click', () => {
-            createSeriesModal.style.display = 'flex';
-            newSeriesNameInput.value = '';
-            newSeriesNameInput.focus();
-        });
-
-        cancelCreateSeriesBtn.addEventListener('click', () => {
-            createSeriesModal.style.display = 'none';
-        });
-
-        confirmCreateSeriesBtn.addEventListener('click', createSeries);
-
-        editSeriesBtn.addEventListener('click', () => {
-            renderPostSelectionList();
-            addToSeriesModal.style.display = 'flex';
-        });
-
-        cancelAddToSeriesBtn.addEventListener('click', () => {
-            addToSeriesModal.style.display = 'none';
-        });
-
-        confirmAddToSeriesBtn.addEventListener('click', saveSeriesPosts);
-
+        
+        // 쓸모없어진 기존 수동 매핑 버튼용 리스너는 깔끔하게 에러방지 예외처리로 대체/제거함
     }
 
     await initializeTab();
