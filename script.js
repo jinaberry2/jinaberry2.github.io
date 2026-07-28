@@ -1,10 +1,10 @@
 document.addEventListener('DOMContentLoaded', async () => {
     // 🌟 1. 수파베이스 연결 설정 (내 프로젝트 정보 입력)
-    const SUPABASE_URL_PUBLIC = "https://guqudddagxrgqwxhjkkm.supabase.co"; 
-    const SUPABASE_KEY_PUBLIC = "[eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1cXVkZGRhZ3hyZ3F3eGhqa2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxOTYyMTgsImV4cCI6MjEwMDc3MjIxOH0.LiXvYKEKkhAONG7d6wfLj-MKOoww_9ITXqHKZQgItPA]";
+    const SUPABASE_URL = "https://guqudddagxrgqwxhjkkm.supabase.co"; 
+    const SUPABASE_KEY = "[eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1cXVkZGRhZ3hyZ3F3eGhqa2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxOTYyMTgsImV4cCI6MjEwMDc3MjIxOH0.LiXvYKEKkhAONG7d6wfLj-MKOoww_9ITXqHKZQgItPA]";
 
     // 🌟 2. 수파베이스 클라이언트 객체 초기화
-    const supabaseClient = supabase.createClient(SUPABASE_URL_PUBLIC, SUPABASE_KEY_PUBLIC);
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let currentTab = 'purchased';
     let searchTerm = '';
