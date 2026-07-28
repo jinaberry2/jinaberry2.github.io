@@ -1,4 +1,11 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // 🌟 1. 수파베이스 연결 설정 (내 프로젝트 정보 입력)
+    const SUPABASE_URL = "https://guqudddagxrgqwxhjkkm.supabase.co"; 
+    const SUPABASE_KEY = "[eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1cXVkZGRhZ3hyZ3F3eGhqa2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxOTYyMTgsImV4cCI6MjEwMDc3MjIxOH0.LiXvYKEKkhAONG7d6wfLj-MKOoww_9ITXqHKZQgItPA]";
+
+    // 🌟 2. 수파베이스 클라이언트 객체 초기화
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
@@ -113,33 +120,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         bulkDeleteBtn.disabled = selectedPostIds.length === 0;
     }
 
+    // 🌟 3. 일괄 삭제 기능 Supabase 대응 리모델링 (Soft Delete 처리)
     async function permanentDeleteSelectedPosts() {
         const confirmDelete = await showCustomConfirm(
-            `${selectedPostIds.length}개의 글을 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`
+            `${selectedPostIds.length}개의 글을 휴지통으로 이동하시겠습니까?`
         );
 
         if (!confirmDelete) return;
 
         let deletedCount = 0;
-        for (const postId of selectedPostIds) {
-            try {
-                const response = await fetch('/.netlify/functions/delete-post', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ postId: postId })
-                });
+        
+        // Supabase에서는 한 번의 요청으로 여러 ID를 한 번에 업데이트할 수 있습니다.
+        try {
+            const { data, error } = await supabaseClient
+                .from('posts')
+                .update({ 
+                    status: 'deleted',
+                    deletedTimestamp: Date.now() // 삭제 정렬용 타임스탬프 기록
+                })
+                .in('id', selectedPostIds); // 선택된 모든 id 배열 매칭
 
-                if (response.ok) {
-                    deletedCount++;
-                } else {
-                    console.error(`Post ${postId} 영구 삭제 실패:`, await response.json());
-                }
-            } catch (error) {
-                console.error(`Post ${postId} 영구 삭제 실패:`, error);
-            }
+            if (error) throw error;
+            deletedCount = selectedPostIds.length;
+            
+        } catch (error) {
+            console.error("Supabase 일괄 삭제 오류:", error);
         }
 
-        await showCustomAlert(`${deletedCount}개의 글이 영구 삭제되었습니다.`);
+        await showCustomAlert(`${deletedCount}개의 글이 휴지통으로 이동되었습니다.`);
         toggleSelectionMode();
         await fetchPostsAndRender();
     }
@@ -274,11 +282,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (checkbox) {
+                // Supabase ID 타입에 맞게 고정 (숫자형 또는 문자열형 유연성 보장)
                 if (selectedPostIds.includes(post.id)) {
                     checkbox.checked = true;
                 }
                 checkbox.addEventListener('change', (e) => {
-                    const postId = parseInt(e.target.dataset.id);
+                    // Supabase 기본 id 형식(숫자)에 매칭
+                    const postId = parseInt(e.target.dataset.id) || e.target.dataset.id;
                     if (e.target.checked) {
                         if (!selectedPostIds.includes(postId)) {
                             selectedPostIds.push(postId);
@@ -404,33 +414,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.appendChild(nextBlockBtn);
     }
 
-    // 🌟 [핵심 에러 해결 및 복구] 안전하게 동기화 데이터를 패치하는 로직
+    // 🌟 4. [핵심 교체 파트] Supabase DB 실시간 조회 연동
     async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
 
         try {
-            // Netlify 함수 대신 정적 posts.json과 recent-views.json을 패치합니다.
-            const [postsResponse, viewsResponse] = await Promise.all([
-                fetch('posts.json?t=' + Date.now()), // 🌟 브라우저 캐시 방지 처리
-                fetch('recent-views.json?t=' + Date.now())
-            ]);
+            // 1단계: Supabase 'posts' 테이블에서 전체 데이터 조회
+            const { data: postsData, error } = await supabaseClient
+                .from('posts')
+                .select('*');
 
-            if (postsResponse.ok) {
-                allPosts = await postsResponse.json();
-            } else {
-                console.error('posts.json 로드 실패');
-                allPosts = [];
-            }
+            if (error) throw error;
+            allPosts = postsData || [];
 
-            if (viewsResponse.ok) {
-                recentViews = await viewsResponse.json();
-            } else {
+            // 2단계: 최근 본 내역 조회 (기존 로컬 보관용 호환 유지)
+            try {
+                const viewsResponse = await fetch('recent-views.json?t=' + Date.now());
+                if (viewsResponse.ok) {
+                    recentViews = await viewsResponse.json();
+                } else {
+                    recentViews = [];
+                }
+            } catch (e) {
                 recentViews = [];
             }
 
         } catch (error) {
-            console.error("데이터 동기화 중 치명적 오류 발생:", error);
+            console.error("Supabase 데이터 조회 중 치명적 오류 발생:", error);
             allPosts = [];
             recentViews = [];
         } finally {
