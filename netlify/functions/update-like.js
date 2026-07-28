@@ -1,60 +1,60 @@
-const { Octokit } = require("@octokit/rest");
+const { createClient } = require('@supabase/supabase-js');
+
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 exports.handler = async (event, context) => {
-    const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-    const GITHUB_USER = process.env.GITHUB_USER;
-    const GITHUB_REPO = process.env.GITHUB_REPO;
-    const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main';
-    const FILE_PATH = "posts.json";
+    // CORS 대응을 위한 preflight 요청 처리
+    if (event.httpMethod === 'OPTIONS') {
+        return {
+            statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            }
+        };
+    }
 
-    const octokit = new Octokit({ auth: GITHUB_TOKEN });
-    const { postId, liked } = JSON.parse(event.body);
+    if (event.httpMethod !== 'POST') {
+        return { 
+            statusCode: 405, 
+            body: JSON.stringify({ message: 'Method Not Allowed' }) 
+        };
+    }
 
     try {
-        const { data: fileData } = await octokit.repos.getContent({
-            owner: GITHUB_USER,
-            repo: GITHUB_REPO,
-            path: FILE_PATH,
-            ref: GITHUB_BRANCH,
-        });
-        const currentSha = fileData.sha;
-        const posts = JSON.parse(Buffer.from(fileData.content, 'base64').toString('utf-8'));
+        // 프론트엔드(post.js)에서 보내오는 페이로드 파싱
+        const { id, liked, likedTimestamp } = JSON.parse(event.body);
 
-        const postToUpdate = posts.find(p => p.id === postId);
-        if (postToUpdate) {
-            postToUpdate.liked = liked;
-            // ✅ 좋아요를 누른 경우, 현재 시각을 likedTimestamp에 저장
-            if (liked) {
-                postToUpdate.likedTimestamp = Date.now();
-            } else {
-                // ✅ 좋아요를 취소한 경우, likedTimestamp 속성을 제거
-                delete postToUpdate.likedTimestamp;
-            }
-        } else {
-            return {
-                statusCode: 404,
-                body: JSON.stringify({ message: "Post not found." }),
-            };
-        }
+        // Supabase의 'posts' 테이블에서 해당 id를 가진 글의 좋아요 상태를 업데이트합니다.
+        const { data, error } = await supabase
+            .from('posts')
+            .update({ 
+                liked: liked, 
+                likedTimestamp: likedTimestamp 
+            })
+            .eq('id', id);
 
-        await octokit.repos.createOrUpdateFileContents({
-            owner: GITHUB_USER,
-            repo: GITHUB_REPO,
-            path: FILE_PATH,
-            message: `Update like status for post: ${postId}`,
-            content: Buffer.from(JSON.stringify(posts, null, 2)).toString("base64"),
-            sha: currentSha,
-            branch: GITHUB_BRANCH,
-        });
+        if (error) throw error;
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: "Like status updated successfully." }),
+            headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*' 
+            },
+            body: JSON.stringify({ success: true, message: 'Like status updated successfully.' }),
         };
     } catch (error) {
-        console.error("Error updating like status:", error);
+        console.error('좋아요 서버 반영 실패:', error);
         return {
             statusCode: 500,
+            headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*' 
+            },
             body: JSON.stringify({ message: `Failed to update like status: ${error.message}` }),
         };
     }
