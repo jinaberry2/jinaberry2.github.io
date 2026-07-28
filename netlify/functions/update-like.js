@@ -25,17 +25,29 @@ exports.handler = async (event, context) => {
     }
 
     try {
-        // 프론트엔드(post.js)에서 보내오는 페이로드 파싱
-        const { id, liked, likedTimestamp } = JSON.parse(event.body);
+        const bodyData = JSON.parse(event.body);
+        
+        // 🌟 [핵심 해결책] 프론트엔드에서 id로 보내든 postId로 보내든 둘 다 낚아채도록 처리합니다.
+        const targetId = bodyData.id || bodyData.postId;
+        const isLiked = bodyData.liked;
+        const timestamp = bodyData.likedTimestamp || (isLiked ? Date.now() : null);
+
+        if (!targetId) {
+            return {
+                statusCode: 400,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ message: 'Missing post ID.' })
+            };
+        }
 
         // Supabase의 'posts' 테이블에서 해당 id를 가진 글의 좋아요 상태를 업데이트합니다.
         const { data, error } = await supabase
             .from('posts')
             .update({ 
-                liked: liked, 
-                likedTimestamp: likedTimestamp 
+                liked: isLiked, 
+                likedTimestamp: timestamp 
             })
-            .eq('id', id);
+            .eq('id', targetId);
 
         if (error) throw error;
 
