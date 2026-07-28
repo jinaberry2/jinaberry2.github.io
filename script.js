@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fetchPostsAndRender();
     }
 
-    function renderPosts() {
+   function renderPosts() {
         // 탭별 버튼 상단 노출 상태 정의
         if (currentTab === 'deleted') {
             selectBtn.style.display = 'block';
@@ -160,7 +160,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
             if (isSelectionMode) toggleSelectionMode();
             
-            // 🌟 시리즈 탭일 경우 전용 렌더러 작동 후 탈출
+            // 시리즈 탭일 경우 전용 렌더러 작동 후 탈출
             renderSeriesPosts();
             return;
         } else {
@@ -187,6 +187,126 @@ document.addEventListener('DOMContentLoaded', async () => {
             postCountElement.textContent = '';
             return;
         }
+
+        // 🌟 [수정 및 보완] status가 없거나 'deleted'가 아닌 모든 글을 기본 구매 목록으로 인정합니다.
+        const purchasedPosts = allPosts.filter(p => !p.status || p.status !== 'deleted');
+        const deletedPosts = allPosts.filter(p => p.status === 'deleted');
+
+        let postsToRender = [];
+
+        if (currentTab === 'purchased') {
+            postsToRender = purchasedPosts;
+        } else if (currentTab === 'liked') {
+            postsToRender = purchasedPosts.filter(post => post.liked);
+        } else if (currentTab === 'recent') {
+            const recentPostIds = new Set(recentViews.map(view => view.id));
+            postsToRender = allPosts
+                .filter(post => recentPostIds.has(post.id))
+                .map(post => {
+                    const view = recentViews.find(v => v.id === post.id);
+                    return { ...post, viewedTimestamp: view ? view.timestamp : 0 };
+                })
+                .sort((a, b) => b.viewedTimestamp - a.viewedTimestamp);
+        } else if (currentTab === 'deleted') {
+            postsToRender = deletedPosts;
+        }
+
+        if (searchTerm) {
+            postsToRender = postsToRender.filter(p =>
+                (p.title && p.title.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (p.author && p.author.toLowerCase().includes(searchTerm.toLowerCase()))
+            );
+        }
+
+        // 🌟 [보안 업데이트] 정렬 기준 값이 객체에 누락되었을 때를 대비한 기본값 처리
+        let sortKey = 'timestamp';
+        if (currentTab === 'deleted') {
+            sortKey = 'deletedTimestamp';
+        } else if (currentTab === 'liked') {
+            sortKey = 'likedTimestamp';
+        } else if (currentTab === 'recent') {
+            sortKey = 'viewedTimestamp';
+        }
+
+        if (currentSort === 'newest') {
+            postsToRender.sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+        } else if (currentSort === 'oldest') {
+            postsToRender.sort((a, b) => (a[sortKey] || 0) - (b[sortKey] || 0));
+        }
+
+        totalPages = Math.ceil(postsToRender.length / POSTS_PER_PAGE);
+        currentPage = Math.min(currentPage, totalPages);
+
+        const startIndex = (currentPage - 1) * POSTS_PER_PAGE;
+        const endIndex = startIndex + POSTS_PER_PAGE;
+        const pagedPosts = postsToRender.slice(startIndex, endIndex);
+
+        postCountElement.textContent = `${postsToRender.length}개의 포스트`;
+        postListContainer.innerHTML = '';
+
+        if (pagedPosts.length === 0 && postsToRender.length > 0) {
+            currentPage = 1;
+            renderPosts();
+            return;
+        } else if (postsToRender.length === 0) {
+            postListContainer.innerHTML = '<p style="text-align:center; color:#888; margin-top: 2rem;">표시할 글이 없습니다.</p>';
+        }
+
+        pagedPosts.forEach(post => {
+            const linkElement = document.createElement('a');
+            linkElement.href = `post.html?id=${post.id}&tab=${currentTab}`;
+            linkElement.className = 'post-item-link';
+            const thumbnailHTML = post.thumbnail ? `<img src="${post.thumbnail}" alt="썸네일" class="thumbnail">` : '';
+            const checkboxHTML = isSelectionMode ? `<div class="checkbox-container"><input type="checkbox" class="post-checkbox" data-id="${post.id}"></div>` : '';
+
+            linkElement.innerHTML = `
+                <div class="post-item">
+                    ${checkboxHTML}
+                    <div class="thumbnail-container">${thumbnailHTML}</div>
+                    <div class="post-info">
+                        <h3>${post.title}</h3>
+                        <p>${post.author} · 영구 열람</p>
+                        ${post.tag ? `<span class="tag">${post.tag}</span>` : ''}
+                    </div>
+                </div>`;
+
+            const postItemDiv = linkElement.querySelector('.post-item');
+            const checkbox = postItemDiv ? postItemDiv.querySelector('.post-checkbox') : null;
+
+            if (isSelectionMode) {
+                linkElement.href = '#';
+                if (postItemDiv) {
+                    postItemDiv.addEventListener('click', (e) => {
+                        if (checkbox && e.target !== checkbox) {
+                            checkbox.checked = !checkbox.checked;
+                            checkbox.dispatchEvent(new Event('change'));
+                        }
+                    });
+                }
+            }
+
+            if (checkbox) {
+                if (selectedPostIds.includes(post.id)) {
+                    checkbox.checked = true;
+                }
+                checkbox.addEventListener('change', (e) => {
+                    const postId = parseInt(e.target.dataset.id);
+                    if (e.target.checked) {
+                        if (!selectedPostIds.includes(postId)) {
+                            selectedPostIds.push(postId);
+                        }
+                    } else {
+                        selectedPostIds = selectedPostIds.filter(id => id !== postId);
+                    }
+                    updateBulkDeleteBtn();
+                });
+            }
+
+            postListContainer.appendChild(linkElement);
+        });
+
+        renderPagination();
+    }
 
         const purchasedPosts = allPosts.filter(p => p.status !== 'deleted');
         const deletedPosts = allPosts.filter(p => p.status === 'deleted');
