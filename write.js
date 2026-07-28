@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const publishBtn = document.getElementById('publish-btn');
     const postTitleInput = document.getElementById('post-title');
     const postAuthorInput = document.getElementById('post-author');
+    const postSeriesInput = document.getElementById('post-series'); // 🌟 시리즈 입력 필드 추가
     const postContentEditable = document.getElementById('post-content');
     const imageInput = document.getElementById('imageInput');
     const insertImageBtn = document.getElementById('insertImageBtn');
@@ -46,6 +47,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 postTitleInput.value = originalPost.title;
                 postAuthorInput.value = originalPost.author;
                 postContentEditable.innerHTML = originalPost.content;
+                
+                // 🌟 수정 모드일 때 기존 시리즈명도 채워넣기
+                if (postSeriesInput && originalPost.seriesName) {
+                    postSeriesInput.value = originalPost.seriesName;
+                }
+                
                 updateWordCount();
                 // 기존 글의 썸네일 설정 (첫 번째 이미지의 src를 파싱)
                 const firstImg = postContentEditable.querySelector('img');
@@ -69,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const title = postTitleInput.value.trim();
         const author = postAuthorInput.value.trim();
         const content = postContentEditable.innerHTML;
+        const seriesName = postSeriesInput ? postSeriesInput.value.trim() : ""; // 🌟 시리즈 입력값 가져오기
 
         if (!title || !content) {
             alert('제목과 내용을 입력해주세요.');
@@ -87,6 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             content: content,
             timestamp: Date.now(),
             thumbnail: newThumbnail, // 동적으로 결정된 썸네일 사용
+            seriesName: seriesName // 🌟 데이터 객체에 시리즈명 추가!
         };
         
         let url = ADD_POST_URL;
