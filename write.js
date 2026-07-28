@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const publishBtn = document.getElementById('publish-btn');
     const postTitleInput = document.getElementById('post-title');
     const postAuthorInput = document.getElementById('post-author');
-    const postSeriesInput = document.getElementById('post-series'); // 🌟 시리즈 입력 필드 추가
+    const postSeriesInput = document.getElementById('post-series'); // 🌟 시리즈 입력 필드 연결
     const postContentEditable = document.getElementById('post-content');
     const imageInput = document.getElementById('imageInput');
     const insertImageBtn = document.getElementById('insertImageBtn');
@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 postAuthorInput.value = originalPost.author;
                 postContentEditable.innerHTML = originalPost.content;
                 
-                // 🌟 수정 모드일 때 기존 시리즈명도 채워넣기
+                // 🌟 수정 모드일 때 기존 시리즈명도 입력 칸에 채워넣기
                 if (postSeriesInput && originalPost.seriesName) {
                     postSeriesInput.value = originalPost.seriesName;
                 }
@@ -119,9 +119,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 alert(message);
                 window.location.href = `archive.html`;
             } else {
-                const error = await response.json();
-                alert(`작업 실패: ${error.message}`);
-                console.error('Error:', error);
+                // 🌟 [안전화 코드 반영] 응답 본문이 JSON이 아니거나 비어있을 때 터지는 현상 방지
+                const errorText = await response.text();
+                let errorMessage = '서버 오류 발생';
+                
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    errorMessage = errorJson.message || errorMessage;
+                } catch (e) {
+                    if (errorText.trim()) errorMessage = errorText;
+                }
+                
+                alert(`작업 실패: ${errorMessage}`);
+                console.error('Server error response:', errorText);
             }
         } catch (error) {
             alert('네트워크 오류가 발생했습니다.');
