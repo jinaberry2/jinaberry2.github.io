@@ -5,7 +5,6 @@ const SUPABASE_KEY = process.env.SUPABASE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 exports.handler = async (event, context) => {
-    // CORS 대응을 위한 preflight 요청 처리
     if (event.httpMethod === 'OPTIONS') {
         return {
             statusCode: 200,
@@ -27,18 +26,22 @@ exports.handler = async (event, context) => {
     try {
         const bodyData = JSON.parse(event.body);
         
-        // 🌟 [핵심 해결책] 프론트엔드에서 id로 보내든 postId로 보내든 둘 다 낚아채도록 처리합니다.
-        const targetId = bodyData.id || bodyData.postId;
+        const rawId = bodyData.id || bodyData.postId;
         const isLiked = bodyData.liked;
         const timestamp = bodyData.likedTimestamp || (isLiked ? Date.now() : null);
 
-        if (!targetId) {
+        if (!rawId) {
             return {
                 statusCode: 400,
                 headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
                 body: JSON.stringify({ message: 'Missing post ID.' })
             };
         }
+
+        // 🌟 [데이터 타입 변환 안전장치] 
+        // 테이블 id가 숫자형(Int)일 경우 문자열이 들어오면 에러가 납니다.
+        // 숫자로 변환이 가능하다면 변환하고, 안 된다면 원래 값(문자열/UUID)을 사용합니다.
+        const targetId = isNaN(rawId) ? rawId : parseInt(rawId, 10);
 
         // Supabase의 'posts' 테이블에서 해당 id를 가진 글의 좋아요 상태를 업데이트합니다.
         const { data, error } = await supabase
