@@ -21,10 +21,9 @@ exports.handler = async function(event, context) {
   
   let postData;
   try {
-      // 2. JSON 파싱 시도
+      // 2. JSON 파싱 시도 (프론트엔드에서 보낸 값 파싱)
       postData = JSON.parse(event.body);
   } catch (error) {
-      // JSON 파싱 실패 시, 자세한 오류 메시지 반환
       console.error("JSON parsing error:", error);
       return {
           statusCode: 400,
@@ -54,19 +53,32 @@ exports.handler = async function(event, context) {
         ref: GITHUB_BRANCH,
       });
       currentSha = fileData.sha;
-      // 파일 내용을 디코딩하고 새 포스트 추가
+      
+      // 파일 내용을 디코딩
       const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-      posts = JSON.parse(content);
+      
+      // 🌟 [안전장치 추가] 깃허브의 posts.json 파일이 완전히 비어있거나 깨졌을 때 터지는 현상 방지
+      if (content.trim()) {
+        try {
+          posts = JSON.parse(content);
+        } catch (parseError) {
+          console.error("GitHub의 posts.json 파싱 실패, 빈 배열로 우회합니다:", parseError);
+          posts = []; // 깨진 JSON일 경우 초기화하여 덮어쓰기 유도
+        }
+      }
     } catch (error) {
       if (error.status !== 404) throw error;
       // 파일이 없으면(404) 그냥 진행 (새로 만들면 됨)
       console.log('posts.json 파일을 찾을 수 없어 새로 생성합니다.');
     }
 
-    // 4. 새 포스트에 id와 liked: false를 추가하고 배열에 추가
+    // 4. 새 포스트에 고유 id 부여 로직 최적화 및 기본 필드 추가
+    // 중복 ID 방지를 위해 배열 내 최대 ID + 1 방식을 채택하고, 누락 방지용 필드 적용
+    const nextId = posts.length > 0 ? Math.max(...posts.map(p => p.id || 0)) + 1 : 1;
+
     const newPost = {
       ...postData,
-      id: Date.now(),
+      id: nextId, // 🌟 타임스탬프 방식에서 겹치지 않는 숫자 카운트 방식으로 최적화
       liked: false,
       views: 0
     };
@@ -86,6 +98,7 @@ exports.handler = async function(event, context) {
     // 성공 응답 반환
     return {
       statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: "글이 성공적으로 등록되었습니다!", data: updateData }),
     };
 
@@ -94,6 +107,7 @@ exports.handler = async function(event, context) {
     // 실패 응답 반환
     return {
       statusCode: 500,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: `서버 오류 발생: ${error.message}` }),
     };
   }
