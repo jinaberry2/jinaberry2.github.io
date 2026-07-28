@@ -344,7 +344,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? `<img src="${representativeThumbnail}" alt="시리즈 썸네일" class="thumbnail" style="filter: brightness(0.95);">` 
                 : `<div class="thumbnail" style="background: #f7f7f7; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:1.5rem;">📁</div>`;
 
-            seriesHeader.innerHTML = `
+           seriesHeader.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
                     <div class="thumbnail-container" style="position: relative;">
                         ${thumbnailHTML}
@@ -352,10 +352,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                             ${postsInSeries.length}화
                         </span>
                     </div>
-                    <div class="post-info">
-                        <h3 style="margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 600;">${name}</h3>
-                        <p style="margin: 0; color: #666;">${postsInSeries[0]?.author || '작가'} · 시리즈 컬렉션</p>
-                        <span class="tag" style="background: #eaeaea; color: #555; margin-top: 6px; display: inline-block;">시리즈</span>
+                    <div class="post-info" style="display: flex; flex-direction: column; justify-content: center;">
+                        <h3 style="margin: 0 0 4px 0; font-size: 1.15rem; font-weight: 600;">${name}</h3>
+                        <!-- 🌟 불필요한 텍스트를 제거하고 작가명을 굵고 선명하게 강조 -->
+                        <p style="margin: 0; color: #333; font-weight: 500; font-size: 0.95rem;">
+                            By. ${postsInSeries[0]?.author || '작가'}
+                        </p>
                     </div>
                 </div>
                 <div class="toggle-icon" style="font-size: 1.2rem; color: #999; padding-right: 10px; transition: transform 0.3s;">▼</div>
