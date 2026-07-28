@@ -1,10 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // 🌟 1. 수파베이스 연결 설정 (내 프로젝트 정보 입력)
-    const SUPABASE_URL = "https://guqudddagxrgqwxhjkkm.supabase.co"; 
-    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd1cXVkZGRhZ3hyZ3F3eGhqa2ttIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUxOTYyMTgsImV4cCI6MjEwMDc3MjIxOH0.LiXvYKEKkhAONG7d6wfLj-MKOoww_9ITXqHKZQgItPA";
-
-    // 🌟 2. 수파베이스 클라이언트 객체 초기화
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // 🌟 [보안 및 구조 개선] 프론트엔드에서 직접 Supabase를 호출하지 않고 Netlify Function을 거치므로
+    // 브라우저 키 노출(SUPABASE_URL, KEY)을 전부 제거하고 안전하게 통신합니다.[cite: 1]
 
     let currentTab = 'purchased';
     let searchTerm = '';
@@ -120,7 +116,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         bulkDeleteBtn.disabled = selectedPostIds.length === 0;
     }
 
-    // 🌟 3. 일괄 삭제 기능 Supabase 대응 리모델링 (Soft Delete 처리)
+    // 🌟 일괄 삭제 기능 Netlify Functions 대응 리모델링[cite: 1]
     async function permanentDeleteSelectedPosts() {
         const confirmDelete = await showCustomConfirm(
             `${selectedPostIds.length}개의 글을 휴지통으로 이동하시겠습니까?`
@@ -131,19 +127,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         let deletedCount = 0;
         
         try {
-            const { data, error } = await supabaseClient
-                .from('posts')
-                .update({ 
-                    status: 'deleted',
-                    deletedTimestamp: Date.now()
-                })
-                .in('id', selectedPostIds);
+            // 브라우저에서 직접 Supabase를 쓰지 않고 백엔드 상태 관리 함수를 찌르도록 우회[cite: 1]
+            const response = await fetch('/.netlify/functions/update-post-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedPostIds, status: 'deleted' })
+            });
 
-            if (error) throw error;
-            deletedCount = selectedPostIds.length;
+            if (response.ok) {
+                deletedCount = selectedPostIds.length;
+            } else {
+                throw new Error("서버 상태 변경 실패");
+            }
             
         } catch (error) {
-            console.error("Supabase 일괄 삭제 오류:", error);
+            console.error("일괄 삭제 처리 중 오류:", error);
         }
 
         await showCustomAlert(`${deletedCount}개의 글이 휴지통으로 이동되었습니다.`);
@@ -284,20 +282,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (selectedPostIds.includes(post.id)) {
                     checkbox.checked = true;
                 }
-            checkbox.addEventListener('change', (e) => {
-    // dataset에서 가져온 원래의 id를 문자열과 숫자 모두 유연하게 인식하도록 수정
-    const rawId = e.target.dataset.id;
-    const postId = isNaN(rawId) ? rawId : parseInt(rawId, 10);
-    
-    if (e.target.checked) {
-        if (!selectedPostIds.includes(postId)) {
-            selectedPostIds.push(postId);
-        }
-    } else {
-        selectedPostIds = selectedPostIds.filter(id => id !== postId);
-    }
-    updateBulkDeleteBtn();
-});
+                checkbox.addEventListener('change', (e) => {
+                    const rawId = e.target.dataset.id;
+                    const postId = isNaN(rawId) ? rawId : parseInt(rawId, 10);
+                    
+                    if (e.target.checked) {
+                        if (!selectedPostIds.includes(postId)) {
+                            selectedPostIds.push(postId);
+                        }
+                    } else {
+                        selectedPostIds = selectedPostIds.filter(id => id !== postId);
+                    }
+                    updateBulkDeleteBtn();
+                });
             }
 
             postListContainer.appendChild(linkElement);
@@ -306,6 +303,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
+    // 🌟 [UI/UX 대규모 개편] 다른 탭들과 일관성을 갖춘 고급스러운 디자인의 시리즈 탭 렌더러[cite: 1]
     function renderSeriesPosts() {
         postListContainer.innerHTML = '';
         
@@ -334,30 +332,66 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const seriesWrapper = document.createElement('div');
             seriesWrapper.className = 'series-wrapper';
-            seriesWrapper.style.cssText = "margin-bottom: 15px; border: 1px solid #ddd; border-radius: 8px; background: #fff; overflow: hidden;";
+            seriesWrapper.style.cssText = "margin-bottom: 20px; border-bottom: 1px solid #f0f0f0; padding-bottom: 15px;";
 
             const seriesHeader = document.createElement('div');
-            seriesHeader.className = 'series-item';
-            seriesHeader.style.cssText = "padding: 15px; cursor: pointer; background: #f9f9f9; border-bottom: 1px solid #eee; display:flex; flex-direction:column; justify-content:center;";
+            seriesHeader.className = 'post-item series-header-item';
+            seriesHeader.style.cssText = "cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s;";
+            
+            // 시리즈 첫 편의 이미지를 대표 이미지로 사용
+            const representativeThumbnail = postsInSeries[0]?.thumbnail;
+            const thumbnailHTML = representativeThumbnail 
+                ? `<img src="${representativeThumbnail}" alt="시리즈 썸네일" class="thumbnail" style="filter: brightness(0.95);">` 
+                : `<div class="thumbnail" style="background: #f7f7f7; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:1.5rem;">📁</div>`;
+
             seriesHeader.innerHTML = `
-                <h4 style="margin: 0; font-size: 1.1rem; font-weight: bold;">${name}</h4>
-                <p style="margin: 5px 0 0 0; color: #666; font-size: 0.9rem;">총 ${postsInSeries.length}개의 글</p>
+                <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                    <div class="thumbnail-container" style="position: relative;">
+                        ${thumbnailHTML}
+                        <span style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+                            ${postsInSeries.length}화
+                        </span>
+                    </div>
+                    <div class="post-info">
+                        <h3 style="margin: 0 0 6px 0; font-size: 1.15rem; font-weight: 600;">${name}</h3>
+                        <p style="margin: 0; color: #666;">${postsInSeries[0]?.author || '작가'} · 시리즈 컬렉션</p>
+                        <span class="tag" style="background: #eaeaea; color: #555; margin-top: 6px; display: inline-block;">시리즈</span>
+                    </div>
+                </div>
+                <div class="toggle-icon" style="font-size: 1.2rem; color: #999; padding-right: 10px; transition: transform 0.3s;">▼</div>
             `;
 
             const postListInner = document.createElement('div');
-            postListInner.style.cssText = "display: none; padding: 5px 15px; background: #fff;";
+            postListInner.style.cssText = "display: none; padding: 10px 10px 5px 30px; margin-top: 5px; border-left: 2px dashed #ddd; flex-direction: column; gap: 8px;";
 
-            postsInSeries.forEach(post => {
+            postsInSeries.forEach((post, index) => {
                 const postLink = document.createElement('a');
                 postLink.href = `post.html?id=${post.id}&tab=${currentTab}`;
-                postLink.style.cssText = "display: block; padding: 10px 0; color: #333; text-decoration: none; border-bottom: 1px solid #f5f5f5; font-size: 0.95rem;";
-                postLink.innerHTML = `📄 <span style="font-weight: 500;">${post.title}</span> <small style="color:#888; margin-left:5px;">by ${post.author}</small>`;
+                postLink.className = 'post-item-link';
+                postLink.style.cssText = "display: block; text-decoration: none; padding: 8px 0; transition: color 0.2s;";
+                postLink.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; color: #444;">
+                        <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">
+                            <span style="color: #888; margin-right: 8px; font-size: 0.85rem;">[${index + 1}화]</span>${post.title}
+                        </span>
+                        <small style="color: #aaa; font-size: 0.8rem;">보러가기 →</small>
+                    </div>
+                `;
                 postListInner.appendChild(postLink);
             });
 
+            const toggleIcon = seriesHeader.querySelector('.toggle-icon');
             seriesHeader.addEventListener('click', () => {
                 const isHidden = postListInner.style.display === 'none';
-                postListInner.style.display = isHidden ? 'block' : 'none';
+                if (isHidden) {
+                    postListInner.style.display = 'flex';
+                    if (toggleIcon) toggleIcon.style.transform = 'rotate(180deg)';
+                    seriesHeader.style.background = '#fcfcfc';
+                } else {
+                    postListInner.style.display = 'none';
+                    if (toggleIcon) toggleIcon.style.transform = 'rotate(0deg)';
+                    seriesHeader.style.background = 'transparent';
+                }
             });
 
             seriesWrapper.appendChild(seriesHeader);
@@ -414,20 +448,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.appendChild(nextBlockBtn);
     }
 
-    // 🌟 4. [핵심 교체 파트] Supabase DB 실시간 조회 + 기존 깃허브 json 병합 연동
+    // 🌟 [서버 연동 핵심 수정] Netlify Serverless Function 연결로 Supabase 보안 조회[cite: 1]
     async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
 
         try {
-            // 1단계: Supabase 'posts' 테이블에서 새 데이터 조회
-            const { data: supabasePosts, error } = await supabaseClient
-                .from('posts')
-                .select('*');
+            // 브라우저에서 직접 Supabase 주소를 치던 부분을 백엔드 함수 호출 구조로 완전 교체[cite: 1]
+            const response = await fetch('/.netlify/functions/get-posts');
+            if (!response.ok) throw new Error("서버에서 포스트 목록을 가져오지 못했습니다.");
+            
+            const supabasePosts = await response.json();
 
-            if (error) throw error;
-
-            // 2단계: 기존 깃허브 posts.json에 있던 옛날 데이터 조회
+            // 기존 깃허브 posts.json에 있던 데이터 로드 병합 연동 유지
             let oldPosts = [];
             try {
                 const oldResponse = await fetch('posts.json?t=' + Date.now());
@@ -438,10 +471,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.warn("기존 posts.json을 로드할 수 없습니다.");
             }
 
-            // 3단계: 두 데이터 통합 (새 글 + 옛날 글)
+            // 실시간 Supabase 데이터와 옛날 글 통합
             allPosts = [...(supabasePosts || []), ...oldPosts];
 
-            // 4단계: 최근 본 내역 조회
+            // 최근 본 내역 조회
             try {
                 const viewsResponse = await fetch('recent-views.json?t=' + Date.now());
                 if (viewsResponse.ok) {
