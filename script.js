@@ -1,7 +1,4 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // 🌟 [보안 및 구조 개선] 프론트엔드에서 직접 Supabase를 호출하지 않고 Netlify Function을 거치므로
-    // 브라우저 키 노출(SUPABASE_URL, KEY)을 전부 제거하고 안전하게 통신합니다.
-
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
@@ -29,7 +26,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
     const paginationContainer = document.getElementById('pagination-container');
 
-    // UI 컨테이너 유지 (에러 방지용 공란 처리)
     const seriesAddBtnContainer = document.getElementById('series-add-btn-container');
     const seriesEditBtnContainer = document.getElementById('series-edit-btn-container');
 
@@ -115,15 +111,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         bulkDeleteBtn.disabled = selectedPostIds.length === 0;
     }
 
-    // 🌟 일괄 삭제 기능 최적화: 'deleted'(삭제된 글) 탭일 때는 영구 삭제, 그 외엔 휴지통 이동 처리
+    // 🌟 일괄 처리 함수 데이터 흐름 안정화 완료
     async function permanentDeleteSelectedPosts() {
+        if (selectedPostIds.length === 0) {
+            await showCustomAlert("선택된 글이 없습니다.");
+            return;
+        }
+
         let confirmMsg = `${selectedPostIds.length}개의 글을 휴지통으로 이동하시겠습니까?`;
         let targetFunction = '/.netlify/functions/update-post-status';
         let requestBody = { ids: selectedPostIds, status: 'deleted' };
 
-        // 현재 선택한 탭이 '삭제된 글(deleted)' 휴지통 내부라면 실제로 영구 삭제 작동
         if (currentTab === 'deleted') {
-            confirmMsg = `${selectedPostIds.length}개의 글을 수파베이스에서 완전히 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
+            confirmMsg = `${selectedPostIds.length}개의 글을 완전히 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
             targetFunction = '/.netlify/functions/delete-post';
             requestBody = { ids: selectedPostIds };
         }
@@ -140,14 +140,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: JSON.stringify(requestBody)
             });
 
-            if (response.ok) {
-                deletedCount = selectedPostIds.length;
+            const result = await response.json();
+
+            if (response.ok && (result.success || result.count !== undefined)) {
+                // 서버가 처리 완료한 개수 혹은 배열 길이를 동적으로 바인딩
+                deletedCount = result.count !== undefined ? result.count : selectedPostIds.length;
             } else {
-                throw new Error("서버 상태 변경 실패");
+                throw new Error(result.message || "서버 요청 처리 실패");
             }
             
         } catch (error) {
             console.error("일괄 삭제 처리 중 오류:", error);
+            await showCustomAlert(`삭제 처리 중 오류 발생: ${error.message}`);
+            return;
         }
 
         if (currentTab === 'deleted') {
@@ -204,7 +209,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (currentTab === 'liked') {
             postsToRender = purchasedPosts.filter(post => post.liked);
         } else if (currentTab === 'recent') {
-            // 🌟 [최근 탭 연동] Supabase에 최근 본 타임스탬프 기록이 남아있는 글들만 필터링
             postsToRender = allPosts.filter(post => post.viewedTimestamp && post.viewedTimestamp > 0);
         } else if (currentTab === 'deleted') {
             postsToRender = deletedPosts;
@@ -223,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (currentTab === 'liked') {
             sortKey = 'likedTimestamp';
         } else if (currentTab === 'recent') {
-            sortKey = 'viewedTimestamp'; // 최근 본 정렬 기준 매핑 완료
+            sortKey = 'viewedTimestamp';
         }
 
         if (currentSort === 'newest') {
@@ -284,19 +288,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (checkbox) {
-                if (selectedPostIds.includes(post.id)) {
+                // ID 타입(문자열 vs 숫자)에 무관하게 매칭되도록 동적 형변환 대응
+                const isChecked = selectedPostIds.some(id => String(id) === String(post.id));
+                if (isChecked) {
                     checkbox.checked = true;
                 }
+                
                 checkbox.addEventListener('change', (e) => {
                     const rawId = e.target.dataset.id;
+                    // 원본 ID 유연성 판별 보정
                     const postId = isNaN(rawId) ? rawId : parseInt(rawId, 10);
                     
                     if (e.target.checked) {
-                        if (!selectedPostIds.includes(postId)) {
+                        if (!selectedPostIds.some(id => String(id) === String(postId))) {
                             selectedPostIds.push(postId);
                         }
                     } else {
-                        selectedPostIds = selectedPostIds.filter(id => id !== postId);
+                        selectedPostIds = selectedPostIds.filter(id => String(id) !== String(postId));
                     }
                     updateBulkDeleteBtn();
                 });
@@ -462,7 +470,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             const supabasePosts = await response.json();
 
-            // 기존 깃허브 posts.json에 있던 데이터 로드 병합 연동 유지
             let oldPosts = [];
             try {
                 const oldResponse = await fetch('posts.json?t=' + Date.now());
@@ -484,7 +491,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 🌟 탭 이동 시 JSON 대신 Supabase 연동에 맞춰 실시간으로 동기화 렌더링 호출
     async function fetchRecentViews() {
         await fetchPostsAndRender();
     }
