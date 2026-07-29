@@ -209,6 +209,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         const permanentDeleteBtn = document.getElementById('permanent-delete-btn');
         const editPostBtn = document.getElementById('edit-post-btn');
 
+        // 🌟 [추가] 상세페이지 내 동적 복구 버튼 제어 엘리먼트 획득 및 생성
+        let restorePostBtn = document.getElementById('restore-post-btn');
+        
+        // 만약 HTML 내부에 엘리먼트가 아직 없다면 점세개 메뉴 내부에 동적으로 주입합니다.
+        if (!restorePostBtn && optionsMenu) {
+            restorePostBtn = document.createElement('button');
+            restorePostBtn.id = 'restore-post-btn';
+            restorePostBtn.className = 'menu-item';
+            restorePostBtn.style.cssText = 'width: 100%; padding: 10px 15px; text-align: left; background: none; border: none; cursor: pointer; font-size: 0.9rem; color: #28a745; font-weight: bold;';
+            restorePostBtn.textContent = '글 복구하기';
+            optionsMenu.insertBefore(restorePostBtn, optionsMenu.firstChild);
+        }
+
         editPostBtn.addEventListener('click', () => {
             window.location.href = `write.html?editId=${post.id}`;
         });
@@ -228,12 +241,18 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
+        // 🌟 [요청 반영 핵심 분기 정렬] 
         if (isDeletedPost) {
             deletePostBtn.style.display = 'none';
             permanentDeleteBtn.style.display = 'block';
+            if (restorePostBtn) restorePostBtn.style.display = 'block'; // 삭제된 글일때만 복구 버튼 활성화
+            
+            prevBtn.disabled = true;
+            nextBtn.disabled = true;
         } else {
             permanentDeleteBtn.style.display = 'none';
             deletePostBtn.style.display = 'block';
+            if (restorePostBtn) restorePostBtn.style.display = 'none';  // 정상 글일때는 복구 버튼 숨김
         }
 
         deletePostBtn.addEventListener('click', () => {
@@ -243,6 +262,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         permanentDeleteBtn.addEventListener('click', () => {
             permanentDeletePost(post.id);
         });
+
+        // 🌟 [추가] 개별 글 복구 기능 리스너 바인딩
+        if (restorePostBtn) {
+            restorePostBtn.onclick = async () => {
+                optionsMenu.classList.remove('visible');
+                const confirmRestore = await showCustomConfirm('이 글을 다시 구매 탭 목록으로 복구하시겠습니까?');
+                if (!confirmRestore) return;
+
+                try {
+                    const response = await fetch('/.netlify/functions/update-post-status', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ ids: [post.id], status: 'active' })
+                    });
+
+                    if (!response.ok) throw new Error("서버 복구 실패");
+                    await showCustomAlert('글이 정상적으로 복구되었습니다.');
+                    window.location.href = 'archive.html?tab=purchased'; // 복구 완료 시 구매 탭으로 이동
+                } catch (error) {
+                    showCustomAlert('글 복구 중 요류가 발생했습니다.');
+                }
+            };
+        }
+
+        if (!isDeletedPost) {
+            const activeNavPosts = getFilteredAndSortedPosts(sourceTab);
+            const currentPostIndex = activeNavPosts.findIndex(p => String(p.id) === String(post.id));
+
+            if (currentPostIndex !== -1) {
+                if (currentPostIndex > 0) {
+                    prevBtn.disabled = false;
+                    prevBtn.onclick = () => {
+                        window.location.href = `post.html?id=${activeNavPosts[currentPostIndex - 1].id}&tab=${sourceTab}`;
+                    };
+                } else {
+                    prevBtn.disabled = true;
+                    prevBtn.onclick = null;
+                }
+
+                if (currentPostIndex < activeNavPosts.length - 1) {
+                    nextBtn.disabled = false;
+                    nextBtn.onclick = () => {
+                        window.location.href = `post.html?id=${activeNavPosts[currentPostIndex + 1].id}&tab=${sourceTab}`;
+                    };
+                } else {
+                    nextBtn.disabled = true;
+                    nextBtn.onclick = null;
+                }
+            } else {
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+            }
+        }
+    }
 
         // 🌟 [이전/다음 글 버튼 기능 완벽 연동]
         // 현재 아카이브 탭에 부합하는 정렬 리스트를 긁어옵니다.
