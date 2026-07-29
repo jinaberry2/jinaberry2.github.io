@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const enteredPassword = modalPasswordInput.value;
         if (enteredPassword === CORRECT_PASSWORD) {
             // 글쓰기창 진입을 허용하는 전용 세션 토큰 발급
-            sessionStorage.setItem('adminAuthenticated', 'true');
+           localStorage.setItem('adminAuthenticated', 'true');
             hidePasswordModal();
             window.location.href = `write.html?tab=${currentTab}`;
         } else {
