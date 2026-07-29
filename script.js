@@ -759,7 +759,7 @@ const currentUser = JSON.parse(sessionUserData);
         // 🌟 [변경점] 기존 비밀번호 모달 대신, 이미 로그인 검증된 상태이므로 바로 글쓰기 창으로 포워딩
         addPostBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            window.location.href = `write.html?tab=${currentTab}`;
+           showPasswordModal();
         });
     }
 
