@@ -1,19 +1,6 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <script>
-    (function() {
-        // localStorage를 활용해 캐시를 지우지 않는 한 로그인 영구 유지
-        const sessionUserData = localStorage.getItem('loggedInUser');
-        if (!sessionUserData) {
-            window.location.href = 'login.html';
-            // 화면이 번쩍이며 노출되는 것을 원천 방지하기 위해 스타일 강제 주입
-            const style = document.createElement('style');
-            style.innerHTML = 'body { display: none !important; }';
-            document.head.appendChild(style);
-        }
-    })();
-</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>새 글 작성</title>
@@ -24,9 +11,10 @@
     <link rel="icon" type="image/png" href="/favicon_io/favicon-16x16.png" sizes="16x16">
     <link rel="apple-touch-icon" href="/favicon_io/apple-touch-icon.png" sizes="180x180">
     
-    <!-- 🌟 [보안 인증 스크립트] 비정상적 주소 입력 접근 시 화면이 그려지기 전에 즉시 차단 -->
+    <!-- 🌟 [단순 비밀번호 검증 복구] 글쓰기창 진입 시 0506 인증 정보가 없으면 차단 -->
     <script>
         (function() {
+            // 메인 화면의 모달창을 통해 인증 성공 시 발급되는 키값 검사
             const isAuth = sessionStorage.getItem('adminAuthenticated');
             if (isAuth !== 'true') {
                 // 커스텀 알림 창을 띄우기 위해 최상단 HTML 도큐먼트에 직접 요소 추가
@@ -47,14 +35,14 @@
                 
                 document.documentElement.appendChild(alertBox);
                 
-                // 도큐먼트 로드가 끝나면 버튼 이벤트 바인딩 및 메인 강제 이동 처리
+                // 버튼 클릭 시 직전 화면이나 아카이브 메인으로 튕겨내기 처리
                 window.addEventListener('DOMContentLoaded', () => {
                     document.getElementById('auth-fail-btn').onclick = () => {
-                        window.location.href = 'index.html';
+                        window.location.href = 'archive.html';
                     };
                 });
                 
-                // 화면 깜빡임으로 에디터가 노출되지 않도록 body 전체 숨김 스타일 임시 주입
+                // 비밀번호 치기 전에 본문이 살짝 보이는 현상을 차단하기 위해 스타일 임시 주입
                 const style = document.createElement('style');
                 style.innerHTML = 'body { display: none !important; }';
                 document.head.appendChild(style);
