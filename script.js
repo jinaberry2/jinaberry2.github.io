@@ -798,13 +798,23 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 🌟 [확실한 원상복구 확인] 
         // 플러스 글쓰기 버튼 누르면 다시 showPasswordModal()을 호출해 0506 비번 모달을 안전하게 켭니다.
-        if (addPostBtn) {
-            addPostBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                showPasswordModal(); 
-            });
+        // 플러스 글쓰기 버튼 클릭 이벤트 수정본
+if (addPostBtn) {
+    addPostBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        
+        // 1. 이미 0506 비밀번호를 한 번 맞춘 기록이 로컬 스토리지에 있는지 확인
+        const isAlreadyAuth = localStorage.getItem('adminAuthenticated');
+        
+        if (isAlreadyAuth === 'true') {
+            // 2. 이미 인증된 사람이라면 모달창 안 띄우고 바로 글쓰기창으로 즉시 패스!
+            window.location.href = `write.html?tab=${currentTab}`;
+        } else {
+            // 3. 기록이 없다면 (최초 1회) 예전처럼 비밀번호 입력 모달창을 띄움
+            showPasswordModal();
         }
-
+    });
+}
         // 모달 내 버튼 및 엔터키 이벤트 재연동
         if (modalLoginBtn) modalLoginBtn.addEventListener('click', handleModalLogin);
         if (modalPasswordInput) {
