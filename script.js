@@ -1,11 +1,10 @@
 document.addEventListener('DOMContentLoaded', async () => {
     // 🌟 [보안 및 구조 개선] 프론트엔드에서 직접 Supabase를 호출하지 않고 Netlify Function을 거치므로
-    // 브라우저 키 노출(SUPABASE_URL, KEY)을 전부 제거하고 안전하게 통신합니다.[cite: 1]
+    // 브라우저 키 노출(SUPABASE_URL, KEY)을 전부 제거하고 안전하게 통신합니다.
 
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
-    let recentViews = [];
     let currentSort = 'newest';
     let isSelectionMode = false;
     let selectedPostIds = [];
@@ -116,22 +115,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         bulkDeleteBtn.disabled = selectedPostIds.length === 0;
     }
 
-    // 🌟 일괄 삭제 기능 Netlify Functions 대응 리모델링[cite: 1]
+    // 🌟 일괄 삭제 기능 최적화: 'deleted'(삭제된 글) 탭일 때는 영구 삭제, 그 외엔 휴지통 이동 처리
     async function permanentDeleteSelectedPosts() {
-        const confirmDelete = await showCustomConfirm(
-            `${selectedPostIds.length}개의 글을 휴지통으로 이동하시겠습니까?`
-        );
+        let confirmMsg = `${selectedPostIds.length}개의 글을 휴지통으로 이동하시겠습니까?`;
+        let targetFunction = '/.netlify/functions/update-post-status';
+        let requestBody = { ids: selectedPostIds, status: 'deleted' };
 
+        // 현재 선택한 탭이 '삭제된 글(deleted)' 휴지통 내부라면 실제로 영구 삭제 작동
+        if (currentTab === 'deleted') {
+            confirmMsg = `${selectedPostIds.length}개의 글을 수파베이스에서 완전히 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
+            targetFunction = '/.netlify/functions/delete-post';
+            requestBody = { ids: selectedPostIds };
+        }
+
+        const confirmDelete = await showCustomConfirm(confirmMsg);
         if (!confirmDelete) return;
 
         let deletedCount = 0;
         
         try {
-            // 브라우저에서 직접 Supabase를 쓰지 않고 백엔드 상태 관리 함수를 찌르도록 우회[cite: 1]
-            const response = await fetch('/.netlify/functions/update-post-status', {
+            const response = await fetch(targetFunction, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ ids: selectedPostIds, status: 'deleted' })
+                body: JSON.stringify(requestBody)
             });
 
             if (response.ok) {
@@ -144,7 +150,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error("일괄 삭제 처리 중 오류:", error);
         }
 
-        await showCustomAlert(`${deletedCount}개의 글이 휴지통으로 이동되었습니다.`);
+        if (currentTab === 'deleted') {
+            await showCustomAlert(`${deletedCount}개의 글이 영구 삭제되었습니다.`);
+        } else {
+            await showCustomAlert(`${deletedCount}개의 글이 휴지통으로 이동되었습니다.`);
+        }
+        
         toggleSelectionMode();
         await fetchPostsAndRender();
     }
@@ -193,14 +204,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (currentTab === 'liked') {
             postsToRender = purchasedPosts.filter(post => post.liked);
         } else if (currentTab === 'recent') {
-            const recentPostIds = new Set(recentViews.map(view => view.id));
-            postsToRender = allPosts
-                .filter(post => recentPostIds.has(post.id))
-                .map(post => {
-                    const view = recentViews.find(v => v.id === post.id);
-                    return { ...post, viewedTimestamp: view ? view.timestamp : 0 };
-                })
-                .sort((a, b) => b.viewedTimestamp - a.viewedTimestamp);
+            // 🌟 [최근 탭 연동] Supabase에 최근 본 타임스탬프 기록이 남아있는 글들만 필터링
+            postsToRender = allPosts.filter(post => post.viewedTimestamp && post.viewedTimestamp > 0);
         } else if (currentTab === 'deleted') {
             postsToRender = deletedPosts;
         }
@@ -218,7 +223,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (currentTab === 'liked') {
             sortKey = 'likedTimestamp';
         } else if (currentTab === 'recent') {
-            sortKey = 'viewedTimestamp';
+            sortKey = 'viewedTimestamp'; // 최근 본 정렬 기준 매핑 완료
         }
 
         if (currentSort === 'newest') {
@@ -303,7 +308,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
-    // 🌟 [UI/UX 대규모 개편] 다른 탭들과 일관성을 갖춘 고급스러운 디자인의 시리즈 탭 렌더러[cite: 1]
     function renderSeriesPosts() {
         postListContainer.innerHTML = '';
         
@@ -338,7 +342,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             seriesHeader.className = 'post-item series-header-item';
             seriesHeader.style.cssText = "cursor: pointer; display: flex; align-items: center; justify-content: space-between; transition: background 0.2s;";
             
-            // 시리즈 첫 편의 이미지를 대표 이미지로 사용
             const representativeThumbnail = postsInSeries[0]?.thumbnail;
             const thumbnailHTML = representativeThumbnail 
                 ? `<img src="${representativeThumbnail}" alt="시리즈 썸네일" class="thumbnail" style="filter: brightness(0.95);">` 
@@ -354,7 +357,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     </div>
                     <div class="post-info" style="display: flex; flex-direction: column; justify-content: center;">
                         <h3 style="margin: 0 0 4px 0; font-size: 1.15rem; font-weight: 600;">${name}</h3>
-                        <!-- 🌟 불필요한 텍스트를 제거하고 작가명을 굵고 선명하게 강조 -->
                         <p style="margin: 0; color: #333; font-weight: 500; font-size: 0.95rem;">
                             By. ${postsInSeries[0]?.author || '작가'}
                         </p>
@@ -450,13 +452,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.appendChild(nextBlockBtn);
     }
 
-    // 🌟 [서버 연동 핵심 수정] Netlify Serverless Function 연결로 Supabase 보안 조회[cite: 1]
     async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
 
         try {
-            // 브라우저에서 직접 Supabase 주소를 치던 부분을 백엔드 함수 호출 구조로 완전 교체[cite: 1]
             const response = await fetch('/.netlify/functions/get-posts');
             if (!response.ok) throw new Error("서버에서 포스트 목록을 가져오지 못했습니다.");
             
@@ -473,40 +473,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.warn("기존 posts.json을 로드할 수 없습니다.");
             }
 
-            // 실시간 Supabase 데이터와 옛날 글 통합
             allPosts = [...(supabasePosts || []), ...oldPosts];
-
-            // 최근 본 내역 조회
-            try {
-                const viewsResponse = await fetch('recent-views.json?t=' + Date.now());
-                if (viewsResponse.ok) {
-                    recentViews = await viewsResponse.json();
-                } else {
-                    recentViews = [];
-                }
-            } catch (e) {
-                recentViews = [];
-            }
 
         } catch (error) {
             console.error("데이터 조회 중 치명적 오류 발생:", error);
             allPosts = [];
-            recentViews = [];
         } finally {
             isLoadingPosts = false;
             renderPosts();
         }
     }
 
+    // 🌟 탭 이동 시 JSON 대신 Supabase 연동에 맞춰 실시간으로 동기화 렌더링 호출
     async function fetchRecentViews() {
-        try {
-            const response = await fetch('recent-views.json?t=' + Date.now());
-            if (response.ok) {
-                recentViews = await response.json();
-            }
-        } catch (e) {
-            console.error("최근 본 내역 갱신 실패:", e);
-        }
+        await fetchPostsAndRender();
     }
 
     function showPasswordModal() {
