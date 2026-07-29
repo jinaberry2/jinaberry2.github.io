@@ -3,10 +3,26 @@
 <head>
     <script>
     (function() {
-        // 🌟 로그인 정보가 없는 비회원이 들어오면 무조건 index.html(대문 로그인창)로 추방합니다.
-        const sessionUserData = localStorage.getItem('loggedInUser');
-        if (!sessionUserData) {
-            window.location.href = 'index.html'; // 👈 여기가 정확히 index.html이어야 합니다!
+        const rawData = localStorage.getItem('loggedInUser');
+        let isValidUser = false;
+
+        // 🌟 index.html의 철벽 가드와 완전히 일치하도록 유령 캐시 판독 정밀화
+        if (rawData && rawData !== 'null' && rawData !== 'undefined' && rawData !== '{}' && rawData !== '""') {
+            try {
+                const user = JSON.parse(rawData);
+                if (user && user.username) {
+                    isValidUser = true;
+                }
+            } catch (e) {
+                localStorage.removeItem('loggedInUser');
+            }
+        }
+
+        // 로그인 안 된 비회원이나 유령 데이터는 확실하게 index.html로 추방 후 코드 종료
+        if (!isValidUser) {
+            localStorage.removeItem('loggedInUser');
+            window.location.href = 'index.html'; 
+            
             const style = document.createElement('style');
             style.innerHTML = 'body { display: none !important; }';
             document.head.appendChild(style);
