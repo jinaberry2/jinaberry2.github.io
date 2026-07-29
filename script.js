@@ -678,27 +678,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.appendChild(nextBlockBtn);
     }
 
-    async function fetchPostsAndRender() {
+async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
 
         try {
+            // 이제 오직 실시간 클라우드 DB(Supabase) 데이터만 정밀하게 긁어옵니다.
             const response = await fetch('/.netlify/functions/get-posts');
             if (!response.ok) throw new Error("서버에서 포스트 목록을 가져오지 못했습니다.");
             
             const supabasePosts = await response.json();
-
-            let oldPosts = [];
-            try {
-                const oldResponse = await fetch('posts.json?t=' + Date.now());
-                if (oldResponse.ok) {
-                    oldPosts = await oldResponse.json();
-                }
-            } catch (e) {
-                console.warn("기존 posts.json을 로드할 수 없습니다.");
-            }
-
-            allPosts = [...(supabasePosts || []), ...oldPosts];
+            allPosts = supabasePosts || [];
 
         } catch (error) {
             console.error("데이터 조회 중 치명적 오류 발생:", error);
