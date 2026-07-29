@@ -15,25 +15,36 @@
     <!-- 🌟 무한 루프 핑퐁을 완벽히 해결한 강력한 마스터 가드 스크립트 -->
 <script>
     (function() {
-        // 1. [최우선 검사] 전체 회원 로그인 상태 체크
         const sessionUserData = localStorage.getItem('loggedInUser');
-        if (!sessionUserData) {
-            // 회원 로그인이 없으면 '즉시' 로그인창(index.html)으로 추방하고 코드 완전 종료
-            window.location.href = 'index.html';
-            forceHideBody();
-            return; // 👈 2번 조건을 검사하지 못하도록 여기서 원천 차단!
+        let isValidUser = false;
+
+        // 🌟 계정 데이터 검증
+        if (sessionUserData && sessionUserData !== 'undefined' && sessionUserData !== 'null') {
+            try {
+                const user = JSON.parse(sessionUserData);
+                if (user && user.username) {
+                    isValidUser = true;
+                }
+            } catch (e) {
+                localStorage.removeItem('loggedInUser');
+            }
         }
 
-        // 2. [회원 로그인 통과 후 검사] 글쓰기 전용 0506 비밀번호 인증 상태 체크
+        // 1. 비회원이거나 계정 데이터가 비정상적인 경우 ➔ 무조건 로그인 대문으로 직행 후 종료
+        if (!isValidUser) {
+            window.location.href = 'index.html';
+            forceHideBody();
+            return; 
+        }
+
+        // 2. 회원 로그인은 통과했으나 0506 인증을 안 거치고 링크 복붙으로 들어온 경우 ➔ 아카이브 메인으로
         const isAuth = localStorage.getItem('adminAuthenticated');
         if (isAuth !== 'true') {
-            // 회원 로그인은 되어있으나 0506을 뚫지 않고 주소창으로 직접 친 유저는 아카이브 메인으로 추방
             window.location.href = 'archive.html';
             forceHideBody();
             return;
         }
 
-        // 화면 번쩍임 철저 방어용 헬퍼 함수
         function forceHideBody() {
             const style = document.createElement('style');
             style.innerHTML = 'body { display: none !important; }';
