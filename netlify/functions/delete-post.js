@@ -1,96 +1,87 @@
-// netlify/functions/delete-post.js
-// GitHub API와 통신하기 위한 라이브러리
-const { Octokit } = require("@octokit/rest");
+const { createClient } = require('@supabase/supabase-js');
 
-// UTF-8 문자(한글 등)를 Base64로 안전하게 인코딩하는 함수
-function toBase64(str) {
-  return Buffer.from(str).toString('base64');
-}
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-exports.handler = async function(event, context) {
-  // HTTP 메서드가 POST인지 확인
-  if (event.httpMethod !== "POST") {
-    return {
-      statusCode: 405,
-      body: "Method Not Allowed"
-    };
-  }
-
-  // 요청 본문에서 postId 가져오기
-  const { postId } = JSON.parse(event.body);
-
-  // Netlify 환경 변수에서 GitHub 관련 정보 가져오기
-  const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
-  const GITHUB_USER = process.env.GITHUB_USER;
-  const GITHUB_REPO = process.env.GITHUB_REPO;
-  const GITHUB_BRANCH = process.env.GITHUB_BRANCH || 'main'; // 기본 브랜치 'main'
-
-  // posts.json 파일 경로
-  const FILE_PATH = "posts.json";
-
-  // Octokit 객체 생성 (GitHub API를 더 쉽게 사용하게 해줌)
-  const octokit = new Octokit({ auth: GITHUB_TOKEN });
-
-  try {
-    let currentSha, posts = [];
-
-    // 1. 기존 posts.json 파일 정보 가져오기 (sha 값 필요)
-    try {
-      const { data: fileData } = await octokit.repos.getContent({
-        owner: GITHUB_USER,
-        repo: GITHUB_REPO,
-        path: FILE_PATH,
-        ref: GITHUB_BRANCH,
-      });
-      currentSha = fileData.sha;
-      // 파일 내용을 디코딩하여 JSON 파싱
-      const content = Buffer.from(fileData.content, 'base64').toString('utf-8');
-      posts = JSON.parse(content);
-    } catch (error) {
-      if (error.status === 404) {
-        // 파일이 없으면 삭제할 글도 없으므로 404 반환
+exports.handler = async (event, context) => {
+    // CORS 대응을 위한 preflight 요청 처리
+    if (event.httpMethod === 'OPTIONS') {
         return {
-          statusCode: 404,
-          body: JSON.stringify({ message: "posts.json 파일을 찾을 수 없습니다." })
+            statusCode: 200,
+            headers: {
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Headers': 'Content-Type',
+                'Access-Control-Allow-Methods': 'POST, OPTIONS'
+            }
         };
-      }
-      throw error; // 다른 오류는 다시 던짐
     }
 
-    // 2. 삭제할 포스트를 제외하고 새로운 배열 생성
-    const updatedPosts = posts.filter(p => p.id !== postId);
-
-    // 포스트가 실제로 삭제되었는지 확인
-    if (updatedPosts.length === posts.length) {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ message: "삭제할 포스트를 찾을 수 없습니다." })
-      };
+    if (event.httpMethod !== 'POST') {
+        return { 
+            statusCode: 405, 
+            body: JSON.stringify({ message: 'Method Not Allowed' }) 
+        };
     }
 
-    // 3. GitHub에 파일 업데이트
-    await octokit.repos.createOrUpdateFileContents({
-      owner: GITHUB_USER,
-      repo: GITHUB_REPO,
-      path: FILE_PATH,
-      message: `포스트 영구 삭제: ${postId}`, // 커밋 메시지
-      content: toBase64(JSON.stringify(updatedPosts, null, 2)), // 업데이트된 내용 인코딩
-      sha: currentSha, // 기존 파일의 sha 값
-      branch: GITHUB_BRANCH,
-    });
+    try {
+        const bodyData = JSON.parse(event.body);
+        
+        // 🌟 [완벽 대응] 일괄 삭제(ids)와 상세페이지 단일 삭제(postId) 포맷을 모두 수집
+        let targetIds = [];
+        if (bodyData.ids && Array.isArray(bodyData.ids)) {
+            targetIds = bodyData.ids;
+        } else if (bodyData.postId) {
+            targetIds = [bodyData.postId];
+        } else if (bodyData.id) {
+            targetIds = [bodyData.id];
+        }
 
-    // 성공 응답 반환
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: "글이 성공적으로 영구 삭제되었습니다!" }),
-    };
+        if (targetIds.length === 0) {
+            return {
+                statusCode: 400,
+                headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+                body: JSON.stringify({ message: 'Missing post IDs for permanent deletion.', count: 0 })
+            };
+        }
 
-  } catch (error) {
-    console.error("GitHub API 오류:", error);
-    // 실패 응답 반환
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ message: `서버 오류 발생: ${error.message}` }),
-    };
-  }
+        // 데이터 타입 변환 안전장치 (숫자 ID형태 대응)
+        const formattedIds = targetIds.map(id => isNaN(id) ? id : parseInt(id, 10));
+
+        // 🌟 Supabase posts 테이블에서 해당 ID들의 데이터를 진짜로 영구 삭제(Hard Delete)
+        // 기존 Octokit 및 posts.json 관련 코드는 전부 Supabase 내부 삭제 쿼리로 대체되었습니다.
+        const { data, error } = await supabase
+            .from('posts')
+            .delete()
+            .in('id', formattedIds)
+            .select(); // 삭제된 행의 정보를 반환받아 정확한 개수를 세기 위함
+
+        if (error) throw error;
+
+        // 실제 Supabase에서 삭제 성공한 데이터 행의 개수 계산
+        const deletedCount = data ? data.length : formattedIds.length;
+
+        return {
+            statusCode: 200,
+            headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*' 
+            },
+            body: JSON.stringify({ 
+                success: true, 
+                message: 'Posts permanently deleted from Supabase.', 
+                count: deletedCount // 프론트엔드 알림창(script.js)에 뿌려줄 정확한 숫자 반환
+            }),
+        };
+    } catch (error) {
+        console.error('영구 삭제 실패:', error);
+        return {
+            statusCode: 500,
+            headers: { 
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*' 
+            },
+            body: JSON.stringify({ message: `Failed to permanently delete posts: ${error.message}`, count: 0 }),
+        };
+    }
 };
