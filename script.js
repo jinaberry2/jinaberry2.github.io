@@ -2,13 +2,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ==========================================================
     // 🌟 [보안 가드] 로그인 체크 및 미인증 사용자 즉각 차단
     // ==========================================================
-    const sessionUserData = sessionStorage.getItem('loggedInUser');
-    if (!sessionUserData) {
-        // 로그인 정보가 없으면 화면을 그리지 않고 즉시 로그인 페이지로 튕겨냄
-        window.location.href = 'login.html';
-        return;
-    }
-    const currentUser = JSON.parse(sessionUserData);
+   // script.js 최상단 영역 수정 예시
+const sessionUserData = localStorage.getItem('loggedInUser'); // 🌟 sessionStorage를 localStorage로 수정!
+if (!sessionUserData) {
+    window.location.href = 'login.html';
+    return;
+}
+const currentUser = JSON.parse(sessionUserData);
 
     // ==========================================================
     // 🌟 [실시간 접속자] 마지막 활동 시간 주기적 갱신 (1분마다)
