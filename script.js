@@ -1,4 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    // 🌟 [보안 및 구조 개선] 프론트엔드에서 직접 Supabase를 호출하지 않고 Netlify Function을 거치므로
+    // 브라우저 키 노출(SUPABASE_URL, KEY)을 전부 제거하고 안전하게 통신합니다.
+
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
@@ -26,6 +29,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
     const paginationContainer = document.getElementById('pagination-container');
 
+    // UI 컨테이너 유지 (에러 방지용 공란 처리)
     const seriesAddBtnContainer = document.getElementById('series-add-btn-container');
     const seriesEditBtnContainer = document.getElementById('series-edit-btn-container');
 
@@ -83,6 +87,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.body.removeChild(confirmBox);
                 resolve(true);
             };
+            document.addEventListener('click', (e) => {
+                if (e.target.id === 'custom-confirm-cancel-btn') {
+                    document.body.removeChild(confirmBox);
+                    resolve(false);
+                }
+            });
             document.getElementById('custom-confirm-cancel-btn').onclick = () => {
                 document.body.removeChild(confirmBox);
                 resolve(false);
@@ -111,7 +121,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         bulkDeleteBtn.disabled = selectedPostIds.length === 0;
     }
 
-    // 🌟 일괄 처리 함수 데이터 흐름 안정화 완료
     async function permanentDeleteSelectedPosts() {
         if (selectedPostIds.length === 0) {
             await showCustomAlert("선택된 글이 없습니다.");
@@ -143,7 +152,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
 
             if (response.ok && (result.success || result.count !== undefined)) {
-                // 서버가 처리 완료한 개수 혹은 배열 길이를 동적으로 바인딩
                 deletedCount = result.count !== undefined ? result.count : selectedPostIds.length;
             } else {
                 throw new Error(result.message || "서버 요청 처리 실패");
@@ -288,7 +296,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             if (checkbox) {
-                // ID 타입(문자열 vs 숫자)에 무관하게 매칭되도록 동적 형변환 대응
                 const isChecked = selectedPostIds.some(id => String(id) === String(post.id));
                 if (isChecked) {
                     checkbox.checked = true;
@@ -296,7 +303,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 
                 checkbox.addEventListener('change', (e) => {
                     const rawId = e.target.dataset.id;
-                    // 원본 ID 유연성 판별 보정
                     const postId = isNaN(rawId) ? rawId : parseInt(rawId, 10);
                     
                     if (e.target.checked) {
@@ -316,6 +322,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
+    // 🌟 [수정 완료된 시리즈 렌더러 함수] 옛날 글이 1화로 오도록 오름차순 정렬 & 화살표 제거 완료!
     function renderSeriesPosts() {
         postListContainer.innerHTML = '';
         
@@ -341,6 +348,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         seriesNames.forEach(name => {
             const postsInSeries = seriesMap[name];
+            
+            // 🌟 [회차 순서 정상화] 옛날 글(timestamp가 작은 것)이 1화로 오도록 오름차순 정렬
+            postsInSeries.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
             
             const seriesWrapper = document.createElement('div');
             seriesWrapper.className = 'series-wrapper';
@@ -381,12 +391,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 postLink.href = `post.html?id=${post.id}&tab=${currentTab}`;
                 postLink.className = 'post-item-link';
                 postLink.style.cssText = "display: block; text-decoration: none; padding: 8px 0; transition: color 0.2s;";
+                
+                // 🌟 [화살표 영역 완벽 제거] 깔끔하게 제목과 화수 정보만 남김
                 postLink.innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; color: #444;">
-                        <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80%;">
+                        <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%;">
                             <span style="color: #888; margin-right: 8px; font-size: 0.85rem;">[${index + 1}화]</span>${post.title}
                         </span>
-                        <small style="color: #aaa; font-size: 0.8rem;">보러가기 →</small>
                     </div>
                 `;
                 postListInner.appendChild(postLink);
