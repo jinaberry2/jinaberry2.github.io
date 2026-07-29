@@ -201,7 +201,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             });
         } catch (err) {
-            contentDiv.innerHTML = `<p style="color:red; font-size:0.9rem;">로드 실패: ${err.message}</p>';
+            // 🌟 짝이 안 맞던 따옴표를 완벽한 백틱으로 수정 완료!
+            contentDiv.innerHTML = `<p style="color:red; font-size:0.9rem;">로드 실패: ${err.message}</p>`;
         }
     }
 
@@ -320,6 +321,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectBtn.textContent = '취소';
             addPostBtn.style.display = 'none';
             bulkDeleteBar.style.display = 'flex';
+            bulkDeleteBar.style.gap = '10px'; // 버튼 간격 깔끔하게 추가
             // 🌟 삭제된 글 탭일 때만 복구 버튼 노출
             if (bulkRestoreBtn) bulkRestoreBtn.style.display = (currentTab === 'deleted') ? 'block' : 'none';
         } else {
@@ -348,7 +350,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 🌟 [신규 추가] 삭제된 글 일괄 복구 처리 함수
+    // 🌟 삭제된 글 일괄 복구 처리 함수
     async function restoreSelectedPosts() {
         if (selectedPostIds.length === 0) {
             await showCustomAlert("복구할 글이 선택되지 않았습니다.");
