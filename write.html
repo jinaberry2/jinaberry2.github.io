@@ -11,47 +11,47 @@
     <link rel="icon" type="image/png" href="/favicon_io/favicon-16x16.png" sizes="16x16">
     <link rel="apple-touch-icon" href="/favicon_io/apple-touch-icon.png" sizes="180x180">
     
-    <!-- 🌟 강력한 자동 로그인 및 0506 패스 마스터 가드 -->
     <!-- 🌟 무한 루프 핑퐁을 완벽히 해결한 강력한 마스터 가드 스크립트 -->
-<script>
-    (function() {
-        const sessionUserData = localStorage.getItem('loggedInUser');
-        let isValidUser = false;
+    <script>
+        (function() {
+            const rawData = localStorage.getItem('loggedInUser');
+            let isValidUser = false;
 
-        // 🌟 계정 데이터 검증
-        if (sessionUserData && sessionUserData !== 'undefined' && sessionUserData !== 'null') {
-            try {
-                const user = JSON.parse(sessionUserData);
-                if (user && user.username) {
-                    isValidUser = true;
+            // 🌟 index.html의 철벽 가드와 완전히 일치하도록 유령 캐시 판독 정밀화
+            if (rawData && rawData !== 'null' && rawData !== 'undefined' && rawData !== '{}' && rawData !== '""') {
+                try {
+                    const user = JSON.parse(rawData);
+                    if (user && user.username) {
+                        isValidUser = true;
+                    }
+                } catch (e) {
+                    localStorage.removeItem('loggedInUser');
                 }
-            } catch (e) {
-                localStorage.removeItem('loggedInUser');
             }
-        }
 
-        // 1. 비회원이거나 계정 데이터가 비정상적인 경우 ➔ 무조건 로그인 대문으로 직행 후 종료
-        if (!isValidUser) {
-            window.location.href = 'index.html';
-            forceHideBody();
-            return; 
-        }
+            // 1. 비회원이거나 계정 데이터가 비정상적인 경우 ➔ 무조건 로그인 대문(index.html)으로 직행 후 종료
+            if (!isValidUser) {
+                localStorage.removeItem('loggedInUser');
+                window.location.href = 'index.html';
+                forceHideBody();
+                return; // 👈 2번 조건을 타지 못하게 철저히 차단
+            }
 
-        // 2. 회원 로그인은 통과했으나 0506 인증을 안 거치고 링크 복붙으로 들어온 경우 ➔ 아카이브 메인으로
-        const isAuth = localStorage.getItem('adminAuthenticated');
-        if (isAuth !== 'true') {
-            window.location.href = 'archive.html';
-            forceHideBody();
-            return;
-        }
+            // 2. 회원 로그인은 통과했으나 0506 인증을 안 거치고 링크 복붙으로 들어온 경우 ➔ 아카이브 메인으로
+            const isAuth = localStorage.getItem('adminAuthenticated');
+            if (isAuth !== 'true') {
+                window.location.href = 'archive.html';
+                forceHideBody();
+                return;
+            }
 
-        function forceHideBody() {
-            const style = document.createElement('style');
-            style.innerHTML = 'body { display: none !important; }';
-            document.head.appendChild(style);
-        }
-    })();
-</script>
+            function forceHideBody() {
+                const style = document.createElement('style');
+                style.innerHTML = 'body { display: none !important; }';
+                document.head.appendChild(style);
+            }
+        })();
+    </script>
 </head>
 <body>
     <header class="write-header">
