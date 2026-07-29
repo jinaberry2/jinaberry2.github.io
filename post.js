@@ -212,8 +212,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             restorePostBtn = document.createElement('button');
             restorePostBtn.id = 'restore-post-btn';
             restorePostBtn.className = 'menu-item';
-            restorePostBtn.style.cssText = 'width: 100%; padding: 10px 15px; text-align: left; background: none; border: none; cursor: pointer; font-size: 0.9rem; color: #28a745; font-weight: bold;';
-            restorePostBtn.textContent = '글 복구하기';
+            restorePostBtn.style.cssText = 'width: 100%; padding: 10px 15px; background: none; border: none; cursor: pointer; font-size: 0.9rem; color: #28a745; font-weight: bold;';
+            restorePostBtn.textContent = '복구하기';
             optionsMenu.insertBefore(restorePostBtn, optionsMenu.firstChild);
         }
 
