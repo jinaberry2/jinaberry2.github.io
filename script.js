@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ==========================================================
     const sessionUserData = localStorage.getItem('loggedInUser');
     if (!sessionUserData) {
-        window.location.href = 'index.html'; // login.html에서 바뀐 index.html로 튕김
+        window.location.href = 'index.html';
         return;
     }
     const currentUser = JSON.parse(sessionUserData);
@@ -32,7 +32,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allPosts = [];
     let currentSort = 'newest';
     let isSelectionMode = false;
-    let selectedPostIds = [];
+    let selectedPostIds = []; // 포스트 선택용 배열
+    let selectedSeriesNames = []; // 시리즈 선택용 배열
     let isLoadingPosts = true;
 
     const POSTS_PER_PAGE = 10;
@@ -57,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const seriesAddBtnContainer = document.getElementById('series-add-btn-container');
     const seriesEditBtnContainer = document.getElementById('series-edit-btn-container');
 
-    // 🌟 [복구] 단순 비밀번호 모달창 관련 DOM 요소들 다시 확보
+    // 비밀번호 모달창 관련 DOM 요소들
     const passwordModalOverlay = document.getElementById('password-modal-overlay');
     const modalPasswordInput = document.getElementById('modal-password-input');
     const modalLoginBtn = document.getElementById('modal-login-btn');
@@ -66,7 +67,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const CORRECT_PASSWORD = '0506';
 
-    // 🌟 [복구] 삭제되었던 비밀번호 모달 제어 함수들 완벽 재정의
     function showPasswordModal() {
         if (!passwordModalOverlay) return;
         passwordModalOverlay.classList.add('visible');
@@ -86,8 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!modalPasswordInput) return;
         const enteredPassword = modalPasswordInput.value;
         if (enteredPassword === CORRECT_PASSWORD) {
-            // 글쓰기창 진입을 허용하는 전용 세션 토큰 발급
-           localStorage.setItem('adminAuthenticated', 'true');
+            localStorage.setItem('adminAuthenticated', 'true');
             hidePasswordModal();
             window.location.href = `write.html?tab=${currentTab}`;
         } else {
@@ -96,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================================
-    // 🌟 [관리자 모니터링 UI 동적 생성]
+    // [관리자 모니터링 UI 동적 생성]
     // ==========================================================
     if (currentUser.role === 'admin') {
         const adminSection = document.createElement('section');
@@ -201,7 +200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             });
         } catch (err) {
-            contentDiv.innerHTML = `<p style="color:red; font-size:0.9rem;">로드 실패: ${err.message}</p>`;
+            contentDiv.innerHTML = `<p style="color:red; font-size:0.9rem;">로드 실패: ${err.message}</p>';
         }
     }
 
@@ -239,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <tbody>`;
             
             if (data.logs.length === 0) {
-                html += '<tr><td colspan="3" style="padding:15px; text-align:center; color:#aaa;">남아있는 기록이 없습니다.</td></tr>';
+                html += '<tr><td colspan="3" style="padding:15px; text-align:center; color:#aaa;">남아가있는 기록이 없습니다.</td></tr>';
             } else {
                 data.logs.forEach(l => {
                     const loginStr = new Date(Number(l.login_at)).toLocaleString('ko-KR');
@@ -311,48 +310,93 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // 🌟 [기능 확장] 선택 모드 토글 시스템 고도화 (구매, 시리즈, 삭제 탭 전체 호환)
     function toggleSelectionMode() {
         isSelectionMode = !isSelectionMode;
         selectedPostIds = [];
+        selectedSeriesNames = [];
+        
         if (isSelectionMode) {
             selectBtn.textContent = '취소';
             addPostBtn.style.display = 'none';
             bulkDeleteBar.style.display = 'flex';
         } else {
             selectBtn.textContent = '선택';
-            addPostBtn.style.display = 'flex';
+            addPostBtn.style.display = (currentTab === 'deleted' || currentTab === 'series') ? 'none' : 'flex';
             bulkDeleteBar.style.display = 'none';
         }
         updateBulkDeleteBtn();
         renderPosts();
     }
 
+    // 🌟 [기능 확장] 카운트 텍스트 및 버튼 문구 변경 시스템
     function updateBulkDeleteBtn() {
-        bulkDeleteBtn.textContent = `일괄 삭제 (${selectedPostIds.length})`;
-        bulkDeleteBtn.disabled = selectedPostIds.length === 0;
+        if (currentTab === 'series') {
+            bulkDeleteBtn.textContent = `시리즈 삭제 (${selectedSeriesNames.length})`;
+            bulkDeleteBtn.disabled = selectedSeriesNames.length === 0;
+        } else {
+            bulkDeleteBtn.textContent = `일괄 삭제 (${selectedPostIds.length})`;
+            bulkDeleteBtn.disabled = selectedPostIds.length === 0;
+        }
     }
 
+    // 🌟 [핵심 변경] 삭제 메커니즘 전면 대수술 (구매/시리즈 ➔ 휴지통이동, 삭제된글 ➔ 영구삭제)
     async function permanentDeleteSelectedPosts() {
-        if (selectedPostIds.length === 0) {
-            await showCustomAlert("선택된 글이 없습니다.");
-            return;
-        }
+        let confirmMsg = "";
+        let targetFunction = "";
+        let requestBody = {};
+        let successMsg = "";
 
-        let confirmMsg = `${selectedPostIds.length}개의 글을 휴지통으로 이동하시겠습니까?`;
-        let targetFunction = '/.netlify/functions/update-post-status';
-        let requestBody = { ids: selectedPostIds, status: 'deleted' };
+        if (currentTab === 'series') {
+            // ① 시리즈 삭제 모드 일 때
+            if (selectedSeriesNames.length === 0) {
+                await showCustomAlert("선택된 시리즈가 없습니다.");
+                return;
+            }
+            confirmMsg = `선택한 ${selectedSeriesNames.length}개의 시리즈와 그 안에 포함된 모든 글들을 삭제 목록(휴지통)으로 이동하시겠습니까?`;
+            
+            // 시리즈명에 대응하는 실제 포스트 ID들을 추출
+            const targetIds = allPosts
+                .filter(p => p.status !== 'deleted' && p.seriesName && selectedSeriesNames.includes(p.seriesName.trim()))
+                .map(p => p.id);
+                
+            if (targetIds.length === 0) {
+                await showCustomAlert("시리즈에 포함된 글이 없어 빈 시리즈만 정리됩니다.");
+                toggleSelectionMode();
+                await fetchPostsAndRender();
+                return;
+            }
+            
+            targetFunction = '/.netlify/functions/update-post-status';
+            requestBody = { ids: targetIds, status: 'deleted' };
+            successMsg = `선택한 시리즈 내 포스트들이 삭제 목록으로 이동되었습니다.`;
 
-        if (currentTab === 'deleted') {
-            confirmMsg = `${selectedPostIds.length}개의 글을 완전히 영구 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`;
+        } else if (currentTab === 'deleted') {
+            // ② 삭제된 글 탭 일 때 ➔ 영구 삭제 진행
+            if (selectedPostIds.length === 0) {
+                await showCustomAlert("선택된 글이 없습니다.");
+                return;
+            }
+            confirmMsg = `${selectedPostIds.length}개의 글을 완전히 영구 삭제하시겠습니까? 이 작업은 절대 되돌릴 수 없습니다.`;
             targetFunction = '/.netlify/functions/delete-post';
             requestBody = { ids: selectedPostIds };
+            successMsg = `선택한 글들이 완벽하게 영구 삭제되었습니다.`;
+
+        } else {
+            // ③ 구매 탭 및 기타 일반 탭 일 때 ➔ 삭제된 글(휴지통)로 이동
+            if (selectedPostIds.length === 0) {
+                await showCustomAlert("선택된 글이 없습니다.");
+                return;
+            }
+            confirmMsg = `${selectedPostIds.length}개의 글을 삭제 목록(휴지통)으로 이동하시겠습니까?`;
+            targetFunction = '/.netlify/functions/update-post-status';
+            requestBody = { ids: selectedPostIds, status: 'deleted' };
+            successMsg = `선택한 글들이 삭제 목록으로 안전하게 이동되었습니다.`;
         }
 
         const confirmDelete = await showCustomConfirm(confirmMsg);
         if (!confirmDelete) return;
 
-        let deletedCount = 0;
-        
         try {
             const response = await fetch(targetFunction, {
                 method: 'POST',
@@ -361,51 +405,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const result = await response.json();
+            if (!response.ok) throw new Error(result.message || "서버 요청 처리 실패");
 
-            if (response.ok && (result.success || result.count !== undefined)) {
-                deletedCount = result.count !== undefined ? result.count : selectedPostIds.length;
-            } else {
-                throw new Error(result.message || "서버 요청 처리 실패");
-            }
-            
         } catch (error) {
-            console.error("일괄 삭제 처리 중 오류:", error);
+            console.error("삭제 처리 오류:", error);
             await showCustomAlert(`삭제 처리 중 오류 발생: ${error.message}`);
             return;
         }
 
-        if (currentTab === 'deleted') {
-            await showCustomAlert(`${deletedCount}개의 글이 영구 삭제되었습니다.`);
-        } else {
-            await showCustomAlert(`${deletedCount}개의 글이 휴지통으로 이동되었습니다.`);
-        }
-        
+        await showCustomAlert(successMsg);
         toggleSelectionMode();
         await fetchPostsAndRender();
     }
 
     function renderPosts() {
-        if (currentTab === 'deleted') {
+        // 🌟 [선택 버튼 활성화 싱크 분기] 이제 구매, 시리즈, 삭제된 글 탭 모두에서 '선택' 기능 제공
+        if (currentTab === 'purchased' || currentTab === 'deleted' || currentTab === 'series') {
             selectBtn.style.display = 'block';
-            addPostBtn.style.display = 'none';
-            if (seriesAddBtnContainer) seriesAddBtnContainer.style.display = 'none';
-            if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
-        } else if (currentTab === 'series') {
-            selectBtn.style.display = 'none';
-            addPostBtn.style.display = 'none';
-            if (seriesAddBtnContainer) seriesAddBtnContainer.style.display = 'none';
-            if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
-            if (isSelectionMode) toggleSelectionMode();
-            
-            renderSeriesPosts();
-            return;
         } else {
             selectBtn.style.display = 'none';
-            addPostBtn.style.display = 'flex';
-            if (seriesAddBtnContainer) seriesAddBtnContainer.style.display = 'none';
-            if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
             if (isSelectionMode) toggleSelectionMode();
         }
+
+        // 플러스 버튼 노출 설정
+        if (currentTab === 'purchased') {
+            if (!isSelectionMode) addPostBtn.style.display = 'flex';
+        } else {
+            addPostBtn.style.display = 'none';
+        }
+
+        if (seriesAddBtnContainer) seriesAddBtnContainer.style.display = 'none';
+        if (seriesEditBtnContainer) seriesEditBtnContainer.style.display = 'none';
 
         if (isLoadingPosts) {
             postListContainer.innerHTML = `
@@ -415,6 +445,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
             `;
             postCountElement.textContent = '';
+            return;
+        }
+
+        // 시리즈 탭 렌더링 우회
+        if (currentTab === 'series') {
+            renderSeriesPosts();
             return;
         }
 
@@ -508,9 +544,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (checkbox) {
                 const isChecked = selectedPostIds.some(id => String(id) === String(post.id));
-                if (isChecked) {
-                    checkbox.checked = true;
-                }
+                if (isChecked) checkbox.checked = true;
                 
                 checkbox.addEventListener('change', (e) => {
                     const rawId = e.target.dataset.id;
@@ -533,6 +567,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
+    // 🌟 [기능 확장] 시리즈 탭 내부에 체크박스 바인딩 및 일괄 선택 시스템 구축
     function renderSeriesPosts() {
         postListContainer.innerHTML = '';
         
@@ -540,9 +575,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         allPosts.forEach(post => {
             if (post.status !== 'deleted' && post.seriesName && post.seriesName.trim() !== "") {
                 const sName = post.seriesName.trim();
-                if (!seriesMap[sName]) {
-                    seriesMap[sName] = [];
-                }
+                if (!seriesMap[sName]) seriesMap[sName] = [];
                 seriesMap[sName].push(post);
             }
         });
@@ -573,8 +606,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? `<img src="${representativeThumbnail}" alt="시리즈 썸네일" class="thumbnail" style="filter: brightness(0.95);">` 
                 : `<div class="thumbnail" style="background: #f7f7f7; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:1.5rem;">📁</div>`;
 
-           seriesHeader.innerHTML = `
+            // 선택 모드일 때 접두어 체크박스 주입
+            const checkboxHTML = isSelectionMode ? `<div class="checkbox-container" style="margin-right:10px;"><input type="checkbox" class="series-checkbox" data-name="${name}"></div>` : '';
+
+            seriesHeader.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 15px; flex: 1;">
+                    ${checkboxHTML}
                     <div class="thumbnail-container" style="position: relative;">
                         ${thumbnailHTML}
                         <span style="position: absolute; bottom: 4px; right: 4px; background: rgba(0,0,0,0.7); color: white; font-size: 0.75rem; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
@@ -611,7 +648,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
 
             const toggleIcon = seriesHeader.querySelector('.toggle-icon');
-            seriesHeader.addEventListener('click', () => {
+            const checkbox = seriesHeader.querySelector('.series-checkbox');
+
+            seriesHeader.addEventListener('click', (e) => {
+                // 선택창 체크박스 영역 자체를 눌렀을 때의 예외 분기
+                if (isSelectionMode && checkbox) {
+                    if (e.target === checkbox) return; 
+                    checkbox.checked = !checkbox.checked;
+                    checkbox.dispatchEvent(new Event('change'));
+                    return;
+                }
+
                 const isHidden = postListInner.style.display === 'none';
                 if (isHidden) {
                     postListInner.style.display = 'flex';
@@ -623,6 +670,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                     seriesHeader.style.background = 'transparent';
                 }
             });
+
+            if (checkbox) {
+                const isChecked = selectedSeriesNames.includes(name);
+                if (isChecked) checkbox.checked = true;
+
+                checkbox.addEventListener('change', (e) => {
+                    const sName = e.target.dataset.name;
+                    if (e.target.checked) {
+                        if (!selectedSeriesNames.includes(sName)) selectedSeriesNames.push(sName);
+                    } else {
+                        selectedSeriesNames = selectedSeriesNames.filter(n => n !== sName);
+                    }
+                    updateBulkDeleteBtn();
+                });
+            }
 
             seriesWrapper.appendChild(seriesHeader);
             seriesWrapper.appendChild(postListInner);
@@ -678,18 +740,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         paginationContainer.appendChild(nextBlockBtn);
     }
 
-async function fetchPostsAndRender() {
+    async function fetchPostsAndRender() {
         isLoadingPosts = true;
         renderPosts();
 
         try {
-            // 이제 오직 실시간 클라우드 DB(Supabase) 데이터만 정밀하게 긁어옵니다.
             const response = await fetch('/.netlify/functions/get-posts');
             if (!response.ok) throw new Error("서버에서 포스트 목록을 가져오지 못했습니다.");
-            
             const supabasePosts = await response.json();
             allPosts = supabasePosts || [];
-
         } catch (error) {
             console.error("데이터 조회 중 치명적 오류 발생:", error);
             allPosts = [];
@@ -697,10 +756,6 @@ async function fetchPostsAndRender() {
             isLoadingPosts = false;
             renderPosts();
         }
-    }
-
-    async function fetchRecentViews() {
-        await fetchPostsAndRender();
     }
 
     async function initializeTab() {
@@ -734,11 +789,12 @@ async function fetchPostsAndRender() {
                 currentTab = e.currentTarget.dataset.tab;
                 localStorage.setItem('lastActiveTab', currentTab);
                 currentSort = 'newest';
-                sortText.textContent = '최신순';
+                if (sortText) sortText.textContent = '최신순';
                 currentPage = 1;
-                if (currentTab === 'recent') {
-                    await fetchRecentViews();
-                }
+                
+                // 새로운 탭으로 건너갈 때 기존 선택 모드 강제 리셋 및 초기화
+                if (isSelectionMode) toggleSelectionMode();
+                
                 renderPosts();
             });
         });
@@ -786,41 +842,29 @@ async function fetchPostsAndRender() {
         if (selectBtn) selectBtn.addEventListener('click', toggleSelectionMode);
         if (bulkDeleteBtn) bulkDeleteBtn.addEventListener('click', permanentDeleteSelectedPosts);
 
-        // 🌟 [확실한 원상복구 확인] 
-        // 플러스 글쓰기 버튼 누르면 다시 showPasswordModal()을 호출해 0506 비번 모달을 안전하게 켭니다.
-        // 플러스 글쓰기 버튼 클릭 이벤트 수정본
-if (addPostBtn) {
-    addPostBtn.addEventListener('click', (e) => {
-        e.preventDefault();
-        
-        // 1. 이미 0506 비밀번호를 한 번 맞춘 기록이 로컬 스토리지에 있는지 확인
-        const isAlreadyAuth = localStorage.getItem('adminAuthenticated');
-        
-        if (isAlreadyAuth === 'true') {
-            // 2. 이미 인증된 사람이라면 모달창 안 띄우고 바로 글쓰기창으로 즉시 패스!
-            window.location.href = `write.html?tab=${currentTab}`;
-        } else {
-            // 3. 기록이 없다면 (최초 1회) 예전처럼 비밀번호 입력 모달창을 띄움
-            showPasswordModal();
+        if (addPostBtn) {
+            addPostBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const isAlreadyAuth = localStorage.getItem('adminAuthenticated');
+                if (isAlreadyAuth === 'true') {
+                    window.location.href = `write.html?tab=${currentTab}`;
+                } else {
+                    showPasswordModal();
+                }
+            });
         }
-    });
-}
-        // 모달 내 버튼 및 엔터키 이벤트 재연동
+
         if (modalLoginBtn) modalLoginBtn.addEventListener('click', handleModalLogin);
         if (modalPasswordInput) {
             modalPasswordInput.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    handleModalLogin();
-                }
+                if (e.key === 'Enter') handleModalLogin();
             });
         }
 
         if (closeModalBtn) closeModalBtn.addEventListener('click', hidePasswordModal);
         if (passwordModalOverlay) {
             passwordModalOverlay.addEventListener('click', (e) => {
-                if (e.target === passwordModalOverlay) {
-                    hidePasswordModal();
-                }
+                if (e.target === passwordModalOverlay) hidePasswordModal();
             });
         }
     }
