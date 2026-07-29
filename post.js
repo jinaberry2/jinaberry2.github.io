@@ -48,7 +48,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 15px;">${message}</p>
                     <div style="display: flex; justify-content: space-around; gap: 10px;">
                         <button id="custom-confirm-cancel-btn" style="background-color: #6c757d; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">취소</button>
-                        <button id="custom-confirm-ok-btn" style="background-color: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">삭제</button>
+                        <button id="custom-confirm-ok-btn" style="background-color: #007bff; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">확인</button>
                     </div>
                 </div>
             `;
@@ -65,7 +65,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // [통합 개편] Netlify 서버 함수를 바라보도록 연동 (posts.json 완전 삭제 반영)
+    // [통합 개편] Netlify 서버 함수를 바라보도록 연동
     const fetchPostDataFromServer = async () => {
         const response = await fetch('/.netlify/functions/get-posts');
         if (!response.ok) {
@@ -178,10 +178,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         let filtered = [];
 
         if (tab === 'deleted') {
-            // 삭제된 글 탭
             filtered = allPostsData.filter(p => p.status === 'deleted');
         } else {
-            // 정상 글 목록 (구매, 좋아요, 최근 등)
             filtered = allPostsData.filter(p => !p.status || p.status !== 'deleted');
             
             if (tab === 'liked') {
@@ -191,13 +189,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
 
-        // 🌟 [요청 사항 반영 핵심 정렬] 
-        // 맨 위가 가장 오래된 글, 아래로 갈수록 최근에 등록된 최신 글이 되도록 오름차순 정렬
+        // 위가 오래된 글, 아래가 최근 글 오름차순 정렬
         filtered.sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
-        
         return filtered;
     }
 
+    // 🌟 괄호 무너짐 및 구조 뒤엉킴 현상 철저 소독 완료!
     function setupButtons(post, isDeletedPost) {
         const likeBtn = document.getElementById('like-btn');
         const likeIcon = likeBtn.querySelector('.icon');
@@ -209,10 +206,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const permanentDeleteBtn = document.getElementById('permanent-delete-btn');
         const editPostBtn = document.getElementById('edit-post-btn');
 
-        // 🌟 [추가] 상세페이지 내 동적 복구 버튼 제어 엘리먼트 획득 및 생성
+        // 점 세 개 메뉴 내부 개별 복구 버튼 동적 제어
         let restorePostBtn = document.getElementById('restore-post-btn');
-        
-        // 만약 HTML 내부에 엘리먼트가 아직 없다면 점세개 메뉴 내부에 동적으로 주입합니다.
         if (!restorePostBtn && optionsMenu) {
             restorePostBtn = document.createElement('button');
             restorePostBtn.id = 'restore-post-btn';
@@ -241,18 +236,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         });
 
-        // 🌟 [요청 반영 핵심 분기 정렬] 
         if (isDeletedPost) {
             deletePostBtn.style.display = 'none';
             permanentDeleteBtn.style.display = 'block';
-            if (restorePostBtn) restorePostBtn.style.display = 'block'; // 삭제된 글일때만 복구 버튼 활성화
+            if (restorePostBtn) restorePostBtn.style.display = 'block';
             
             prevBtn.disabled = true;
             nextBtn.disabled = true;
         } else {
             permanentDeleteBtn.style.display = 'none';
             deletePostBtn.style.display = 'block';
-            if (restorePostBtn) restorePostBtn.style.display = 'none';  // 정상 글일때는 복구 버튼 숨김
+            if (restorePostBtn) restorePostBtn.style.display = 'none';
         }
 
         deletePostBtn.addEventListener('click', () => {
@@ -263,7 +257,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             permanentDeletePost(post.id);
         });
 
-        // 🌟 [추가] 개별 글 복구 기능 리스너 바인딩
+        // 개별 글 복구 리스너 바인딩
         if (restorePostBtn) {
             restorePostBtn.onclick = async () => {
                 optionsMenu.classList.remove('visible');
@@ -279,51 +273,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                     if (!response.ok) throw new Error("서버 복구 실패");
                     await showCustomAlert('글이 정상적으로 복구되었습니다.');
-                    window.location.href = 'archive.html?tab=purchased'; // 복구 완료 시 구매 탭으로 이동
+                    window.location.href = 'archive.html?tab=purchased';
                 } catch (error) {
-                    showCustomAlert('글 복구 중 요류가 발생했습니다.');
+                    showCustomAlert('글 복구 중 오류가 발생했습니다.');
                 }
             };
         }
 
-        if (!isDeletedPost) {
-            const activeNavPosts = getFilteredAndSortedPosts(sourceTab);
-            const currentPostIndex = activeNavPosts.findIndex(p => String(p.id) === String(post.id));
-
-            if (currentPostIndex !== -1) {
-                if (currentPostIndex > 0) {
-                    prevBtn.disabled = false;
-                    prevBtn.onclick = () => {
-                        window.location.href = `post.html?id=${activeNavPosts[currentPostIndex - 1].id}&tab=${sourceTab}`;
-                    };
-                } else {
-                    prevBtn.disabled = true;
-                    prevBtn.onclick = null;
-                }
-
-                if (currentPostIndex < activeNavPosts.length - 1) {
-                    nextBtn.disabled = false;
-                    nextBtn.onclick = () => {
-                        window.location.href = `post.html?id=${activeNavPosts[currentPostIndex + 1].id}&tab=${sourceTab}`;
-                    };
-                } else {
-                    nextBtn.disabled = true;
-                    nextBtn.onclick = null;
-                }
-            } else {
-                prevBtn.disabled = true;
-                nextBtn.disabled = true;
-            }
-        }
-    }
-
-        // 🌟 [이전/다음 글 버튼 기능 완벽 연동]
-        // 현재 아카이브 탭에 부합하는 정렬 리스트를 긁어옵니다.
+        // 이전 / 다음 정렬 이동 기능 연동
         const activeNavPosts = getFilteredAndSortedPosts(sourceTab);
         const currentPostIndex = activeNavPosts.findIndex(p => String(p.id) === String(post.id));
 
-        if (currentPostIndex !== -1) {
-            // [이전] 버튼 복구: 목록 상단(index - 1)에 위치한 더 예전에 등록된 과거 글로 이동
+        if (currentPostIndex !== -1 && !isDeletedPost) {
             if (currentPostIndex > 0) {
                 prevBtn.disabled = false;
                 prevBtn.onclick = () => {
@@ -334,7 +295,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 prevBtn.onclick = null;
             }
 
-            // [다음] 버튼 복구: 목록 하단(index + 1)에 위치한 더 최근에 등록된 최신 글로 이동
             if (currentPostIndex < activeNavPosts.length - 1) {
                 nextBtn.disabled = false;
                 nextBtn.onclick = () => {
@@ -398,7 +358,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 🌟 [우측 하단 목록 창 복구] 아카이브의 정렬 상태와 동일하게 목록 생성
     function setupSidePanel(currentPost, sourceTab) {
         const listBtn = document.getElementById('list-btn');
         const sidePanel = document.getElementById('side-panel');
@@ -407,7 +366,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const panelPostList = document.getElementById('panel-post-list');
 
         async function openSidePanel() {
-            // 아카이브 정렬 원칙(위가 옛날 글, 아래가 최신 글)이 반영된 데이터 세트 매핑
             const panelPosts = getFilteredAndSortedPosts(sourceTab);
 
             panelPostList.innerHTML = '';
@@ -420,7 +378,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     itemLink.className = 'panel-post-item';
                     if (String(p.id) === String(currentPost.id)) itemLink.classList.add('active');
                     
-                    // 오래된 글이 1번부터 차례대로 찍히도록 구성
                     itemLink.innerHTML = `<span class="panel-post-number">${index + 1}</span><span class="panel-post-title">${p.title}</span>`;
                     panelPostList.appendChild(itemLink);
                 });
