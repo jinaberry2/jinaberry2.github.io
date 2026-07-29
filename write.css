@@ -178,14 +178,14 @@ body {
 
 
 .series-input {
-    width: 100%;
+    
     padding: 10px 0;
     font-size: 1rem;
     font-weight: 400;
     color: #555555;
     background-color: transparent;
     border: none;
-    border-bottom: 1px solid #e4e0d8; /* 은은한 토프 라인 */
+   
     outline: none;
     box-sizing: border-box;
     margin-top: 12px;
