@@ -99,6 +99,17 @@
             text-decoration: underline;
         }
     </style>
+    <script>
+    (function() {
+        // 이미 로그인 성공한 기록이 캐시에 있다면 로그인창을 건너뛰고 바로 아카이브로 패스!
+        if (localStorage.getItem('loggedInUser')) {
+            window.location.href = 'archive.html';
+            const style = document.createElement('style');
+            style.innerHTML = 'body { display: none !important; }';
+            document.head.appendChild(style);
+        }
+    })();
+</script>
 </head>
 <body>
 
