@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================================
-    // [관리자 모니터링 UI 동적 생성]
+    // [관리자 모니터링 UI 동적 생성] ➔ 따옴표 꼬임 해결 완료!
     // ==========================================================
     if (currentUser.role === 'admin') {
         const adminSection = document.createElement('section');
@@ -200,7 +200,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             });
         } catch (err) {
-            contentDiv.innerHTML = `<p style="color:red; font-size:0.9rem;">로드 실패: ${err.message}</p>';
+            contentDiv.innerHTML = `<p style="color:red; font-size:0.9rem;">로드 실패: ${err.message}</p>`;
         }
     }
 
@@ -238,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <tbody>`;
             
             if (data.logs.length === 0) {
-                html += '<tr><td colspan="3" style="padding:15px; text-align:center; color:#aaa;">남아가있는 기록이 없습니다.</td></tr>';
+                html += '<tr><td colspan="3" style="padding:15px; text-align:center; color:#aaa;">남아있는 기록이 없습니다.</td></tr>';
             } else {
                 data.logs.forEach(l => {
                     const loginStr = new Date(Number(l.login_at)).toLocaleString('ko-KR');
@@ -310,7 +310,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 🌟 [기능 확장] 선택 모드 토글 시스템 고도화 (구매, 시리즈, 삭제 탭 전체 호환)
     function toggleSelectionMode() {
         isSelectionMode = !isSelectionMode;
         selectedPostIds = [];
@@ -329,7 +328,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPosts();
     }
 
-    // 🌟 [기능 확장] 카운트 텍스트 및 버튼 문구 변경 시스템
     function updateBulkDeleteBtn() {
         if (currentTab === 'series') {
             bulkDeleteBtn.textContent = `시리즈 삭제 (${selectedSeriesNames.length})`;
@@ -340,7 +338,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // 🌟 [핵심 변경] 삭제 메커니즘 전면 대수술 (구매/시리즈 ➔ 휴지통이동, 삭제된글 ➔ 영구삭제)
     async function permanentDeleteSelectedPosts() {
         let confirmMsg = "";
         let targetFunction = "";
@@ -348,14 +345,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         let successMsg = "";
 
         if (currentTab === 'series') {
-            // ① 시리즈 삭제 모드 일 때
             if (selectedSeriesNames.length === 0) {
                 await showCustomAlert("선택된 시리즈가 없습니다.");
                 return;
             }
             confirmMsg = `선택한 ${selectedSeriesNames.length}개의 시리즈와 그 안에 포함된 모든 글들을 삭제 목록(휴지통)으로 이동하시겠습니까?`;
             
-            // 시리즈명에 대응하는 실제 포스트 ID들을 추출
             const targetIds = allPosts
                 .filter(p => p.status !== 'deleted' && p.seriesName && selectedSeriesNames.includes(p.seriesName.trim()))
                 .map(p => p.id);
@@ -372,7 +367,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             successMsg = `선택한 시리즈 내 포스트들이 삭제 목록으로 이동되었습니다.`;
 
         } else if (currentTab === 'deleted') {
-            // ② 삭제된 글 탭 일 때 ➔ 영구 삭제 진행
             if (selectedPostIds.length === 0) {
                 await showCustomAlert("선택된 글이 없습니다.");
                 return;
@@ -383,7 +377,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             successMsg = `선택한 글들이 완벽하게 영구 삭제되었습니다.`;
 
         } else {
-            // ③ 구매 탭 및 기타 일반 탭 일 때 ➔ 삭제된 글(휴지통)로 이동
             if (selectedPostIds.length === 0) {
                 await showCustomAlert("선택된 글이 없습니다.");
                 return;
@@ -419,7 +412,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderPosts() {
-        // 🌟 [선택 버튼 활성화 싱크 분기] 이제 구매, 시리즈, 삭제된 글 탭 모두에서 '선택' 기능 제공
         if (currentTab === 'purchased' || currentTab === 'deleted' || currentTab === 'series') {
             selectBtn.style.display = 'block';
         } else {
@@ -427,7 +419,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (isSelectionMode) toggleSelectionMode();
         }
 
-        // 플러스 버튼 노출 설정
         if (currentTab === 'purchased') {
             if (!isSelectionMode) addPostBtn.style.display = 'flex';
         } else {
@@ -448,7 +439,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // 시리즈 탭 렌더링 우회
         if (currentTab === 'series') {
             renderSeriesPosts();
             return;
@@ -567,7 +557,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
-    // 🌟 [기능 확장] 시리즈 탭 내부에 체크박스 바인딩 및 일괄 선택 시스템 구축
     function renderSeriesPosts() {
         postListContainer.innerHTML = '';
         
@@ -606,7 +595,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ? `<img src="${representativeThumbnail}" alt="시리즈 썸네일" class="thumbnail" style="filter: brightness(0.95);">` 
                 : `<div class="thumbnail" style="background: #f7f7f7; display:flex; align-items:center; justify-content:center; border-radius:6px; font-size:1.5rem;">📁</div>`;
 
-            // 선택 모드일 때 접두어 체크박스 주입
             const checkboxHTML = isSelectionMode ? `<div class="checkbox-container" style="margin-right:10px;"><input type="checkbox" class="series-checkbox" data-name="${name}"></div>` : '';
 
             seriesHeader.innerHTML = `
@@ -651,7 +639,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const checkbox = seriesHeader.querySelector('.series-checkbox');
 
             seriesHeader.addEventListener('click', (e) => {
-                // 선택창 체크박스 영역 자체를 눌렀을 때의 예외 분기
                 if (isSelectionMode && checkbox) {
                     if (e.target === checkbox) return; 
                     checkbox.checked = !checkbox.checked;
@@ -792,7 +779,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (sortText) sortText.textContent = '최신순';
                 currentPage = 1;
                 
-                // 새로운 탭으로 건너갈 때 기존 선택 모드 강제 리셋 및 초기화
                 if (isSelectionMode) toggleSelectionMode();
                 
                 renderPosts();
