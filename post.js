@@ -65,26 +65,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // 🌟 [통합 개편] 로컬 파일 조회 구조를 걷어내고 Netlify 서버 함수를 바라보도록 연동[cite: 1]
+    // [통합 개편] Netlify 서버 함수를 바라보도록 연동 (posts.json 완전 삭제 반영)
     const fetchPostDataFromServer = async () => {
         const response = await fetch('/.netlify/functions/get-posts');
         if (!response.ok) {
             throw new Error('Failed to fetch posts from server.');
         }
         const supabasePosts = await response.json();
-
-        // 기존 posts.json 옛날 데이터 백업 병합 유지
-        let oldPosts = [];
-        try {
-            const oldResponse = await fetch('posts.json?t=' + Date.now());
-            if (oldResponse.ok) {
-                oldPosts = await oldResponse.json();
-            }
-        } catch (e) {
-            console.warn("기존 posts.json 데이터를 로드할 수 없습니다.");
-        }
-
-        return [...(supabasePosts || []), ...oldPosts];
+        return supabasePosts || [];
     };
 
     const recordView = async (id) => {
@@ -152,7 +140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         setupSidePanel(post, sourceTab);
     }
 
-    // 🌟 [서버 연동 교체] update-like 서버 백엔드 명세에 맞춰 JSON 페이로드 정렬 및 토글 처리
     async function toggleLikeStatus(post) {
         const likeBtn = document.getElementById('like-btn');
         const likeIcon = likeBtn.querySelector('.icon');
@@ -164,7 +151,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         likeIcon.textContent = '♡';
 
         try {
-            // 주소 및 인자명 매핑 정렬
             const response = await fetch('/.netlify/functions/update-like', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -179,13 +165,37 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             console.log("Like status updated successfully.");
         } catch (error) {
-            // 실패 시 롤백 처리
             post.liked = originalLikedStatus;
             likeBtn.classList.toggle('active', post.liked);
             likeIcon.textContent = '♡';
             showCustomAlert('좋아요 상태 변경 실패: 네트워크 오류 또는 서버 오류가 발생했습니다.');
             console.error('좋아요 토글 오류:', error);
         }
+    }
+
+    // 🌟 아카이브 창의 탭 규칙을 동기화하여 현재 유효한 글 배열을 뽑아내고 정렬하는 내부 함수
+    function getFilteredAndSortedPosts(tab) {
+        let filtered = [];
+
+        if (tab === 'deleted') {
+            // 삭제된 글 탭
+            filtered = allPostsData.filter(p => p.status === 'deleted');
+        } else {
+            // 정상 글 목록 (구매, 좋아요, 최근 등)
+            filtered = allPostsData.filter(p => !p.status || p.status !== 'deleted');
+            
+            if (tab === 'liked') {
+                filtered = filtered.filter(p => p.liked);
+            } else if (tab === 'recent') {
+                filtered = filtered.filter(p => p.viewedTimestamp && Number(p.viewedTimestamp) > 0);
+            }
+        }
+
+        // 🌟 [요청 사항 반영 핵심 정렬] 
+        // 맨 위가 가장 오래된 글, 아래로 갈수록 최근에 등록된 최신 글이 되도록 오름차순 정렬
+        filtered.sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
+        
+        return filtered;
     }
 
     function setupButtons(post, isDeletedPost) {
@@ -219,8 +229,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         if (isDeletedPost) {
-            prevBtn.disabled = true;
-            nextBtn.disabled = true;
             deletePostBtn.style.display = 'none';
             permanentDeleteBtn.style.display = 'block';
         } else {
@@ -236,20 +244,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             permanentDeletePost(post.id);
         });
 
-        if (!isDeletedPost) {
-            const activePosts = allPostsData.filter(p => p.status === 'active' || !p.status)
-                .sort((a, b) => a.timestamp - b.timestamp);
+        // 🌟 [이전/다음 글 버튼 기능 완벽 연동]
+        // 현재 아카이브 탭에 부합하는 정렬 리스트를 긁어옵니다.
+        const activeNavPosts = getFilteredAndSortedPosts(sourceTab);
+        const currentPostIndex = activeNavPosts.findIndex(p => String(p.id) === String(post.id));
 
-            const currentPostIndex = activePosts.findIndex(p => p.id == post.id);
-
-            prevBtn.disabled = currentPostIndex <= 0;
-            if (!prevBtn.disabled) {
-                prevBtn.onclick = () => window.location.href = `post.html?id=${activePosts[currentPostIndex - 1].id}&tab=${sourceTab}`;
+        if (currentPostIndex !== -1) {
+            // [이전] 버튼 복구: 목록 상단(index - 1)에 위치한 더 예전에 등록된 과거 글로 이동
+            if (currentPostIndex > 0) {
+                prevBtn.disabled = false;
+                prevBtn.onclick = () => {
+                    window.location.href = `post.html?id=${activeNavPosts[currentPostIndex - 1].id}&tab=${sourceTab}`;
+                };
+            } else {
+                prevBtn.disabled = true;
+                prevBtn.onclick = null;
             }
 
-            nextBtn.disabled = currentPostIndex >= activePosts.length - 1;
-            if (!nextBtn.disabled) {
-                nextBtn.onclick = () => window.location.href = `post.html?id=${activePosts[currentPostIndex + 1].id}&tab=${sourceTab}`;
+            // [다음] 버튼 복구: 목록 하단(index + 1)에 위치한 더 최근에 등록된 최신 글로 이동
+            if (currentPostIndex < activeNavPosts.length - 1) {
+                nextBtn.disabled = false;
+                nextBtn.onclick = () => {
+                    window.location.href = `post.html?id=${activeNavPosts[currentPostIndex + 1].id}&tab=${sourceTab}`;
+                };
+            } else {
+                nextBtn.disabled = true;
+                nextBtn.onclick = null;
             }
         } else {
             prevBtn.disabled = true;
@@ -305,6 +325,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
+    // 🌟 [우측 하단 목록 창 복구] 아카이브의 정렬 상태와 동일하게 목록 생성
     function setupSidePanel(currentPost, sourceTab) {
         const listBtn = document.getElementById('list-btn');
         const sidePanel = document.getElementById('side-panel');
@@ -313,21 +334,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const panelPostList = document.getElementById('panel-post-list');
 
         async function openSidePanel() {
-            let panelPosts = [];
-            let postsToFilter = allPostsData.filter(p => p.status === 'active' || !p.status);
-
-            if (sourceTab === 'liked') {
-                panelPosts = postsToFilter.filter(p => p.liked);
-                panelPosts.sort((a, b) => b.likedTimestamp - a.likedTimestamp);
-            } else if (sourceTab === 'recent') {
-                panelPosts = recentViewsData.map(view => allPostsData.find(p => p.id == view.id)).filter(Boolean);
-            } else if (sourceTab === 'deleted') {
-                panelPosts = allPostsData.filter(p => p.status === 'deleted');
-                panelPosts.sort((a, b) => b.deletedTimestamp - a.deletedTimestamp);
-            } else {
-                panelPosts = postsToFilter;
-                panelPosts.sort((a, b) => b.timestamp - a.timestamp);
-            }
+            // 아카이브 정렬 원칙(위가 옛날 글, 아래가 최신 글)이 반영된 데이터 세트 매핑
+            const panelPosts = getFilteredAndSortedPosts(sourceTab);
 
             panelPostList.innerHTML = '';
             if (panelPosts.length === 0) {
@@ -337,7 +345,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const itemLink = document.createElement('a');
                     itemLink.href = `post.html?id=${p.id}&tab=${sourceTab}`;
                     itemLink.className = 'panel-post-item';
-                    if (p.id == currentPost.id) itemLink.classList.add('active');
+                    if (String(p.id) === String(currentPost.id)) itemLink.classList.add('active');
+                    
+                    // 오래된 글이 1번부터 차례대로 찍히도록 구성
                     itemLink.innerHTML = `<span class="panel-post-number">${index + 1}</span><span class="panel-post-title">${p.title}</span>`;
                     panelPostList.appendChild(itemLink);
                 });
@@ -356,10 +366,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPost(null);
 
         try {
-            // 통합된 함수를 통하여 전체 게시물 통합 데이터를 수신[cite: 1]
             allPostsData = await fetchPostDataFromServer();
 
-            // 최근 본 목록 내역 파싱 백업 유지
             try {
                 const viewsResponse = await fetch('recent-views.json');
                 if (viewsResponse.ok) {
@@ -369,7 +377,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 recentViewsData = [];
             }
 
-            currentPost = allPostsData.find(p => p.id == postId);
+            currentPost = allPostsData.find(p => String(p.id) === String(postId));
         } catch (error) {
             console.error("Initialization Error:", error);
             currentPost = null;
