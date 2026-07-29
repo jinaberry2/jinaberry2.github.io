@@ -1,7 +1,34 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // 🌟 [보안 및 구조 개선] 프론트엔드에서 직접 Supabase를 호출하지 않고 Netlify Function을 거치므로
-    // 브라우저 키 노출(SUPABASE_URL, KEY)을 전부 제거하고 안전하게 통신합니다.
+    // ==========================================================
+    // 🌟 [보안 가드] 로그인 체크 및 미인증 사용자 즉각 차단
+    // ==========================================================
+    const sessionUserData = sessionStorage.getItem('loggedInUser');
+    if (!sessionUserData) {
+        // 로그인 정보가 없으면 화면을 그리지 않고 즉시 로그인 페이지로 튕겨냄
+        window.location.href = 'login.html';
+        return;
+    }
+    const currentUser = JSON.parse(sessionUserData);
 
+    // ==========================================================
+    // 🌟 [실시간 접속자] 마지막 활동 시간 주기적 갱신 (1분마다)
+    // ==========================================================
+    async function updateActiveStatus() {
+        try {
+            await fetch('/.netlify/functions/update-active-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: currentUser.username })
+            });
+        } catch (e) {
+            console.error("접속 상태 갱신 실패:", e);
+        }
+    }
+    // 진입 시 최초 1회 갱신 및 이후 1분마다 주기적 실행
+    updateActiveStatus();
+    setInterval(updateActiveStatus, 60000);
+
+    // 기본 변수 선언부
     let currentTab = 'purchased';
     let searchTerm = '';
     let allPosts = [];
@@ -29,18 +56,176 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
     const paginationContainer = document.getElementById('pagination-container');
 
-    // UI 컨테이너 유지 (에러 방지용 공란 처리)
     const seriesAddBtnContainer = document.getElementById('series-add-btn-container');
     const seriesEditBtnContainer = document.getElementById('series-edit-btn-container');
 
-    const passwordModalOverlay = document.getElementById('password-modal-overlay');
-    const modalPasswordInput = document.getElementById('modal-password-input');
-    const modalLoginBtn = document.getElementById('modal-login-btn');
-    const modalErrorMessage = document.getElementById('modal-error-message');
-    const closeModalBtn = document.getElementById('close-modal-btn');
+    // ==========================================================
+    // 🌟 [관리자 모니터링 UI 동적 생성] 
+    // 최고 관리자 계정(role이 admin인 유저)일 때만 화면 하단에 모니터링 대시보드를 바인딩합니다.
+    // ==========================================================
+    if (currentUser.role === 'admin') {
+        const adminSection = document.createElement('section');
+        adminSection.id = 'admin-dashboard-section';
+        adminSection.style.cssText = "margin-top: 40px; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-top: 4px solid #007bff;";
+        adminSection.innerHTML = `
+            <h2 style="font-size: 1.3rem; margin-top: 0; margin-bottom: 15px; color: #333; display: flex; align-items: center; gap: 8px;">
+                🛡️ 관리자 모니터링 대시보드
+            </h2>
+            <div style="display: flex; gap: 20px; margin-bottom: 25px; border-bottom: 1px solid #eee; padding-bottom: 15px;">
+                <button id="admin-subtab-users" style="padding: 8px 16px; background: #007bff; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">가입 승인 관리</button>
+                <button id="admin-subtab-logs" style="padding: 8px 16px; background: #f0f0f0; color: #333; border: none; border-radius: 4px; cursor: pointer; font-weight: bold;">실시간 접속 & 로그</button>
+            </div>
+            <div id="admin-dashboard-content"></div>
+        `;
+        // 메인 컨테이너 하단 요소 뒤에 안착
+        const mainElement = document.querySelector('main') || document.body;
+        mainElement.appendChild(adminSection);
 
-    const CORRECT_PASSWORD = '0506';
+        // 하위 메뉴 클릭 이벤트 바인딩
+        document.getElementById('admin-subtab-users').onclick = (e) => {
+            switchAdminTab('users', e.target);
+        };
+        document.getElementById('admin-subtab-logs').onclick = (e) => {
+            switchAdminTab('logs', e.target);
+        };
 
+        // 초기 화면은 가입 승인창으로 지정
+        loadPendingUsers();
+    }
+
+    function switchAdminTab(target, activeBtn) {
+        const btns = [document.getElementById('admin-subtab-users'), document.getElementById('admin-subtab-logs')];
+        btns.forEach(b => {
+            b.style.background = '#f0f0f0';
+            b.style.color = '#333';
+        });
+        activeBtn.style.background = '#007bff';
+        activeBtn.style.color = '#fff';
+
+        if (target === 'users') {
+            loadPendingUsers();
+        } else {
+            loadLiveUsersAndLogs();
+        }
+    }
+
+    // [관리자 기능 1] 가입 승인 대기 목록 조회 및 처리
+    async function loadPendingUsers() {
+        const contentDiv = document.getElementById('admin-dashboard-content');
+        contentDiv.innerHTML = '<p style="color:#888;">회원 목록 로드 중...</p>';
+        try {
+            const res = await fetch('/.netlify/functions/get-pending-users');
+            const users = await res.json();
+            if (!res.ok) throw new Error(users.message);
+
+            if (users.length === 0) {
+                contentDiv.innerHTML = '<p style="color:#aaa; text-align:center; padding: 15px 0;">승인 대기 중인 신규 가입자가 없습니다.</p>';
+                return;
+            }
+
+            let html = `<table style="width:100%; border-collapse:collapse; font-size:0.95rem;">
+                <thead>
+                    <tr style="background:#f8f9fa; border-bottom:2px solid #eee; text-align:left;">
+                        <th style="padding:10px;">아이디</th><th style="padding:10px;">신청 일시</th><th style="padding:10px; text-align:center;">관리</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+            users.forEach(u => {
+                const dateStr = new Date(u.created_at).toLocaleString('ko-KR');
+                html += `<tr style="border-bottom:1px solid #eee;">
+                    <td style="padding:10px; font-weight:600;">${u.username}</td>
+                    <td style="padding:10px; color:#666;">${dateStr}</td>
+                    <td style="padding:10px; text-align:center;">
+                        <button class="approve-user-btn" data-username="${u.username}" style="padding:4px 10px; background:#28a745; color:#fff; border:none; border-radius:4px; cursor:pointer; font-size:0.85rem; font-weight:bold;">승인</button>
+                    </td>
+                </tr>`;
+            });
+            html += '</tbody></table>';
+            contentDiv.innerHTML = html;
+
+            // 승인 버튼 이벤트 주입
+            contentDiv.querySelectorAll('.approve-user-btn').forEach(btn => {
+                btn.onclick = async (e) => {
+                    const uname = e.target.dataset.username;
+                    if (confirm(`${uname} 회원의 가입을 승인하시겠습니까?`)) {
+                        try {
+                            const approveRes = await fetch('/.netlify/functions/approve-user', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ username: uname })
+                            });
+                            if (approveRes.ok) {
+                                alert("성공적으로 승인되었습니다.");
+                                loadPendingUsers();
+                            } else {
+                                const err = await approveRes.json();
+                                alert(`승인 실패: ${err.message}`);
+                            }
+                        } catch (err) {
+                            alert("통신 중 에러 발생");
+                        }
+                    }
+                };
+            });
+        } catch (err) {
+            contentDiv.innerHTML = `<p style="color:red;">로드 실패: ${err.message}</p>`;
+        }
+    }
+
+    // [관리자 기능 2] 실시간 접속자 및 전체 로그인 로그 조회
+    async function loadLiveUsersAndLogs() {
+        const contentDiv = document.getElementById('admin-dashboard-content');
+        contentDiv.innerHTML = '<p style="color:#888;">접속 로그 분석 중...</p>';
+        try {
+            const res = await fetch('/.netlify/functions/get-login-logs');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.message);
+
+            let html = `<div style="margin-bottom: 25px;">
+                <h3 style="font-size:1.05rem; margin-bottom:10px; color:#222;">🟢 현재 접속 중인 멤버 (${data.liveUsers.length}명)</h3>`;
+            
+            if (data.liveUsers.length === 0) {
+                html += '<p style="color:#999; font-size:0.9rem; padding-left:5px;">현재 활동 중인 회원이 없습니다.</p>';
+            } else {
+                html += '<div style="display:flex; gap:10px; flex-wrap:wrap;">';
+                data.liveUsers.forEach(u => {
+                    html += `<span style="padding:5px 12px; background:#e2f0d9; color:#385723; border-radius:20px; font-size:0.85rem; font-weight:bold; border:1px solid #c5e0b4;">👤 ${u.username}</span>`;
+                });
+                html += '</div>';
+            }
+            html += '</div>';
+
+            html += `<div>
+                <h3 style="font-size:1.05rem; margin-bottom:10px; color:#222;">📋 최근 로그인 이력 기록</h3>
+                <table style="width:100%; border-collapse:collapse; font-size:0.9rem;">
+                    <thead>
+                        <tr style="background:#f8f9fa; border-bottom:2px solid #eee; text-align:left;">
+                            <th style="padding:8px;">유저명</th><th style="padding:8px;">로그인 시각</th><th style="padding:8px;">최지막 활동 시각</th>
+                        </tr>
+                    </thead>
+                    <tbody>`;
+            
+            if (data.logs.length === 0) {
+                html += '<tr><td colspan="3" style="padding:15px; text-align:center; color:#aaa;">남아있는 기록이 없습니다.</td></tr>';
+            } else {
+                data.logs.forEach(l => {
+                    const loginStr = new Date(Number(l.login_at)).toLocaleString('ko-KR');
+                    const activeStr = new Date(Number(l.last_active_at)).toLocaleString('ko-KR');
+                    html += `<tr style="border-bottom:1px solid #eee;">
+                        <td style="padding:8px; font-weight:600; color:#444;">${l.username}</td>
+                        <td style="padding:8px; color:#666;">${loginStr}</td>
+                        <td style="padding:8px; color:#888;">${activeStr}</td>
+                    </tr>`;
+                });
+            }
+            html += '</tbody></table></div>';
+            contentDiv.innerHTML = html;
+        } catch (err) {
+            contentDiv.innerHTML = `<p style="color:red;">데이터 로드 실패: ${err.message}</p>`;
+        }
+    }
+
+    // 커스텀 알림/컨펌창 등 기존 UI 헬퍼 함수
     function showCustomAlert(message) {
         return new Promise(resolve => {
             const alertBox = document.createElement('div');
@@ -87,12 +272,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 document.body.removeChild(confirmBox);
                 resolve(true);
             };
-            document.addEventListener('click', (e) => {
-                if (e.target.id === 'custom-confirm-cancel-btn') {
-                    document.body.removeChild(confirmBox);
-                    resolve(false);
-                }
-            });
             document.getElementById('custom-confirm-cancel-btn').onclick = () => {
                 document.body.removeChild(confirmBox);
                 resolve(false);
@@ -217,9 +396,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (currentTab === 'liked') {
             postsToRender = purchasedPosts.filter(post => post.liked);
         } else if (currentTab === 'recent') {
-            // 🌟 [최근 탭 필터링 강화] 
-            // 삭제되지 않은 글 중에서 viewedTimestamp가 0보다 큰 '모든' 글을 예외 없이 수집합니다.
-            // 데이터 형변환 오류나 구 posts.json 결합 누락 없이 무제한으로 쌓이도록 처리했습니다.
             postsToRender = allPosts.filter(post => post.status !== 'deleted' && post.viewedTimestamp && Number(post.viewedTimestamp) > 0);
         } else if (currentTab === 'deleted') {
             postsToRender = deletedPosts;
@@ -350,7 +526,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         seriesNames.forEach(name => {
             const postsInSeries = seriesMap[name];
-            
             postsInSeries.sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
             
             const seriesWrapper = document.createElement('div');
@@ -506,28 +681,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         await fetchPostsAndRender();
     }
 
-    function showPasswordModal() {
-        passwordModalOverlay.classList.add('visible');
-        modalPasswordInput.value = '';
-        modalErrorMessage.style.visibility = 'hidden';
-        modalPasswordInput.focus();
-    }
-
-    function hidePasswordModal() {
-        passwordModalOverlay.classList.remove('visible');
-    }
-
-    function handleModalLogin() {
-        const enteredPassword = modalPasswordInput.value;
-        if (enteredPassword === CORRECT_PASSWORD) {
-            sessionStorage.setItem('adminAuthenticated', 'true');
-            hidePasswordModal();
-            window.location.href = `write.html?tab=${currentTab}`;
-        } else {
-            modalErrorMessage.style.visibility = 'visible';
-        }
-    }
-
     async function initializeTab() {
         const params = new URLSearchParams(window.location.search);
         const tabFromUrl = params.get('tab');
@@ -603,23 +756,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectBtn.addEventListener('click', toggleSelectionMode);
         bulkDeleteBtn.addEventListener('click', permanentDeleteSelectedPosts);
 
+        // 🌟 [변경점] 기존 비밀번호 모달 대신, 이미 로그인 검증된 상태이므로 바로 글쓰기 창으로 포워딩
         addPostBtn.addEventListener('click', (e) => {
             e.preventDefault();
-            showPasswordModal();
-        });
-
-        modalLoginBtn.addEventListener('click', handleModalLogin);
-        modalPasswordInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                handleModalLogin();
-            }
-        });
-
-        closeModalBtn.addEventListener('click', hidePasswordModal);
-        passwordModalOverlay.addEventListener('click', (e) => {
-            if (e.target === passwordModalOverlay) {
-                hidePasswordModal();
-            }
+            window.location.href = `write.html?tab=${currentTab}`;
         });
     }
 
