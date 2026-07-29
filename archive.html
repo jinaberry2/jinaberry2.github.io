@@ -3,11 +3,10 @@
 <head>
     <script>
     (function() {
-        // localStorage를 활용해 캐시를 지우지 않는 한 로그인 영구 유지
+        // 🌟 로그인 정보가 없는 비회원이 들어오면 무조건 index.html(대문 로그인창)로 추방합니다.
         const sessionUserData = localStorage.getItem('loggedInUser');
         if (!sessionUserData) {
-            window.location.href = 'index.html';
-            // 화면이 번쩍이며 노출되는 것을 원천 방지하기 위해 스타일 강제 주입
+            window.location.href = 'index.html'; // 👈 여기가 정확히 index.html이어야 합니다!
             const style = document.createElement('style');
             style.innerHTML = 'body { display: none !important; }';
             document.head.appendChild(style);
