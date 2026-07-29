@@ -1,13 +1,16 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <script>
+   <!-- post.html 상단 가드 스크립트 수정 예시 -->
+<script>
     (function() {
-        // localStorage를 활용해 캐시를 지우지 않는 한 로그인 영구 유지
+        // localStorage에서 유저 정보가 있는지 확인
         const sessionUserData = localStorage.getItem('loggedInUser');
         if (!sessionUserData) {
-            window.location.href = 'login.html';
-            // 화면이 번쩍이며 노출되는 것을 원천 방지하기 위해 스타일 강제 주입
+            // ❌ 기존에 login.html로 되어 있던 경로를 index.html로 변경!
+            window.location.href = 'index.html';
+            
+            // 화면 번쩍임 방지 스타일 주입
             const style = document.createElement('style');
             style.innerHTML = 'body { display: none !important; }';
             document.head.appendChild(style);
