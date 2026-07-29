@@ -1,10 +1,22 @@
-// auth.js
+// 🌟 auth.js 최종 동기화 수정본
 (function() {
-    const isAuthenticated = localStorage.getItem('authenticated');
-    const path = window.location.pathname;
+    const rawData = localStorage.getItem('loggedInUser');
+    let isValidUser = false;
 
-    // 인증 상태가 아니면 로그인 페이지로 리디렉션
-    if (isAuthenticated !== 'true' && (path.includes('archive.html') || path.includes('write.html') || path.includes('post.html') || path.endsWith('/archive'))) {
+    if (rawData && rawData !== 'null' && rawData !== 'undefined' && rawData !== '{}' && rawData !== '""') {
+        try {
+            const user = JSON.parse(rawData);
+            if (user && user.username) {
+                isValidUser = true;
+            }
+        } catch (e) {
+            localStorage.removeItem('loggedInUser');
+        }
+    }
+
+    // 외부 스크립트 레벨에서도 옛날 주소(login.html) 대신 새 통합 대문(index.html)으로 맞춤
+    if (!isValidUser) {
+        localStorage.removeItem('loggedInUser');
         window.location.href = 'index.html';
     }
 })();
