@@ -217,7 +217,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (currentTab === 'liked') {
             postsToRender = purchasedPosts.filter(post => post.liked);
         } else if (currentTab === 'recent') {
-            postsToRender = allPosts.filter(post => post.viewedTimestamp && post.viewedTimestamp > 0);
+            // 🌟 [최근 탭 필터링 강화] 
+            // 삭제되지 않은 글 중에서 viewedTimestamp가 0보다 큰 '모든' 글을 예외 없이 수집합니다.
+            // 데이터 형변환 오류나 구 posts.json 결합 누락 없이 무제한으로 쌓이도록 처리했습니다.
+            postsToRender = allPosts.filter(post => post.status !== 'deleted' && post.viewedTimestamp && Number(post.viewedTimestamp) > 0);
         } else if (currentTab === 'deleted') {
             postsToRender = deletedPosts;
         }
@@ -239,9 +242,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (currentSort === 'newest') {
-            postsToRender.sort((a, b) => (b[sortKey] || 0) - (a[sortKey] || 0));
+            postsToRender.sort((a, b) => (Number(b[sortKey]) || 0) - (Number(a[sortKey]) || 0));
         } else if (currentSort === 'oldest') {
-            postsToRender.sort((a, b) => (a[sortKey] || 0) - (b[sortKey] || 0));
+            postsToRender.sort((a, b) => (Number(a[sortKey]) || 0) - (Number(b[sortKey]) || 0));
         }
 
         totalPages = Math.ceil(postsToRender.length / POSTS_PER_PAGE);
@@ -348,7 +351,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         seriesNames.forEach(name => {
             const postsInSeries = seriesMap[name];
             
-            postsInSeries.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+            postsInSeries.sort((a, b) => (Number(a.timestamp) || 0) - (Number(b.timestamp) || 0));
             
             const seriesWrapper = document.createElement('div');
             seriesWrapper.className = 'series-wrapper';
@@ -517,7 +520,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     function handleModalLogin() {
         const enteredPassword = modalPasswordInput.value;
         if (enteredPassword === CORRECT_PASSWORD) {
-            // 🌟 [보안 개선] 올바른 비밀번호 통과 시 세션 저장소에 토큰 발급
             sessionStorage.setItem('adminAuthenticated', 'true');
             hidePasswordModal();
             window.location.href = `write.html?tab=${currentTab}`;
