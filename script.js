@@ -322,7 +322,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderPagination();
     }
 
-    // 🌟 [수정 완료된 시리즈 렌더러 함수] 옛날 글이 1화로 오도록 오름차순 정렬 & 화살표 제거 완료!
     function renderSeriesPosts() {
         postListContainer.innerHTML = '';
         
@@ -349,7 +348,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         seriesNames.forEach(name => {
             const postsInSeries = seriesMap[name];
             
-            // 🌟 [회차 순서 정상화] 옛날 글(timestamp가 작은 것)이 1화로 오도록 오름차순 정렬
             postsInSeries.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
             
             const seriesWrapper = document.createElement('div');
@@ -392,7 +390,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 postLink.className = 'post-item-link';
                 postLink.style.cssText = "display: block; text-decoration: none; padding: 8px 0; transition: color 0.2s;";
                 
-                // 🌟 [화살표 영역 완벽 제거] 깔끔하게 제목과 화수 정보만 남김
                 postLink.innerHTML = `
                     <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.95rem; color: #444;">
                         <span style="font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 95%;">
@@ -520,6 +517,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     function handleModalLogin() {
         const enteredPassword = modalPasswordInput.value;
         if (enteredPassword === CORRECT_PASSWORD) {
+            // 🌟 [보안 개선] 올바른 비밀번호 통과 시 세션 저장소에 토큰 발급
+            sessionStorage.setItem('adminAuthenticated', 'true');
             hidePasswordModal();
             window.location.href = `write.html?tab=${currentTab}`;
         } else {
