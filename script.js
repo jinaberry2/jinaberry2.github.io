@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const addPostBtn = document.getElementById('add-post-btn');
     const bulkDeleteBar = document.getElementById('bulk-delete-bar');
     const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+    const bulkRestoreBtn = document.getElementById('bulk-restore-btn'); // 복구 버튼 바인딩
     const paginationContainer = document.getElementById('pagination-container');
 
     const seriesAddBtnContainer = document.getElementById('series-add-btn-container');
@@ -95,7 +96,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ==========================================================
-    // [관리자 모니터링 UI 동적 생성] ➔ 따옴표 꼬임 해결 완료!
+    // [관리자 모니터링 UI 동적 생성]
     // ==========================================================
     if (currentUser.role === 'admin') {
         const adminSection = document.createElement('section');
@@ -200,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 };
             });
         } catch (err) {
-            contentDiv.innerHTML = `<p style="color:red; font-size:0.9rem;">로드 실패: ${err.message}</p>`;
+            contentDiv.innerHTML = `<p style="color:red; font-size:0.9rem;">로드 실패: ${err.message}</p>';
         }
     }
 
@@ -293,7 +294,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 15px;">${message}</p>
                     <div style="display: flex; justify-content: space-around; gap: 10px;">
                         <button id="custom-confirm-cancel-btn" style="background-color: #6c757d; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">취소</button>
-                        <button id="custom-confirm-ok-btn" style="background-color: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">삭제</button>
+                        <button id="custom-confirm-ok-btn" style="background-color: #dc3545; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer;">확인</button>
                     </div>
                 </div>
             `;
@@ -304,7 +305,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 resolve(true);
             };
             document.getElementById('custom-confirm-cancel-btn').onclick = () => {
-                document.body.removeChild(confirmBox);
+                confirmBox.parentNode.removeChild(confirmBox);
                 resolve(false);
             };
         });
@@ -319,10 +320,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             selectBtn.textContent = '취소';
             addPostBtn.style.display = 'none';
             bulkDeleteBar.style.display = 'flex';
+            // 🌟 삭제된 글 탭일 때만 복구 버튼 노출
+            if (bulkRestoreBtn) bulkRestoreBtn.style.display = (currentTab === 'deleted') ? 'block' : 'none';
         } else {
             selectBtn.textContent = '선택';
             addPostBtn.style.display = (currentTab === 'deleted' || currentTab === 'series') ? 'none' : 'flex';
             bulkDeleteBar.style.display = 'none';
+            if (bulkRestoreBtn) bulkRestoreBtn.style.display = 'none';
         }
         updateBulkDeleteBtn();
         renderPosts();
@@ -335,6 +339,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else {
             bulkDeleteBtn.textContent = `일괄 삭제 (${selectedPostIds.length})`;
             bulkDeleteBtn.disabled = selectedPostIds.length === 0;
+            
+            // 🌟 일괄 복구 카운트 동기화
+            if (bulkRestoreBtn) {
+                bulkRestoreBtn.textContent = `일괄 복구 (${selectedPostIds.length})`;
+                bulkRestoreBtn.disabled = selectedPostIds.length === 0;
+            }
+        }
+    }
+
+    // 🌟 [신규 추가] 삭제된 글 일괄 복구 처리 함수
+    async function restoreSelectedPosts() {
+        if (selectedPostIds.length === 0) {
+            await showCustomAlert("복구할 글이 선택되지 않았습니다.");
+            return;
+        }
+
+        const confirmRestore = await showCustomConfirm(`선택한 ${selectedPostIds.length}개의 글을 다시 구매 탭 목록으로 복구하시겠습니까?`);
+        if (!confirmRestore) return;
+
+        try {
+            const response = await fetch('/.netlify/functions/update-post-status', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: selectedPostIds, status: 'active' }) // active(정상)로 변경
+            });
+
+            const result = await response.json();
+            if (!response.ok) throw new Error(result.message || "복구 요청 실패");
+
+            await showCustomAlert(`선택한 글들이 성공적으로 복구되어 구매 탭으로 이동했습니다.`);
+            toggleSelectionMode();
+            await fetchPostsAndRender();
+        } catch (error) {
+            console.error("복구 처리 오류:", error);
+            await showCustomAlert(`복구 중 오류가 발생했습니다: ${error.message}`);
         }
     }
 
@@ -827,6 +866,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (selectBtn) selectBtn.addEventListener('click', toggleSelectionMode);
         if (bulkDeleteBtn) bulkDeleteBtn.addEventListener('click', permanentDeleteSelectedPosts);
+        if (bulkRestoreBtn) bulkRestoreBtn.addEventListener('click', restoreSelectedPosts); // 🌟 일괄 복구 리스너 바인딩
 
         if (addPostBtn) {
             addPostBtn.addEventListener('click', (e) => {
