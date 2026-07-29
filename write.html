@@ -11,47 +11,33 @@
     <link rel="icon" type="image/png" href="/favicon_io/favicon-16x16.png" sizes="16x16">
     <link rel="apple-touch-icon" href="/favicon_io/apple-touch-icon.png" sizes="180x180">
     
-    <!-- 🌟 [단순 비밀번호 검증 복구] 글쓰기창 진입 시 0506 인증 정보가 없으면 차단 -->
-   <script>
-    (function() {
-        // 1차 방어선: 주소창 강제 입력 유저 검사 (index.html 로그인 완료 정보)
-        const sessionUserData = localStorage.getItem('loggedInUser');
-        
-        // 2차 방어선: 글쓰기 권한 모달 인증 검사 (0506 통과 정보)
-        const isAuth = sessionStorage.getItem('adminAuthenticated');
-        
-        // 둘 중 하나라도 인증이 풀려있거나 로그인하지 않은 비정상 접근일 때
-        if (!sessionUserData || isAuth !== 'true') {
-            const alertBox = document.createElement('div');
-            alertBox.style.cssText = `
-                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                background-color: rgba(0, 0, 0, 0.85); z-index: 99999;
-                display: flex; align-items: center; justify-content: center;
-                font-family: sans-serif;
-            `;
-            alertBox.innerHTML = `
-                <div style="background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center; max-width: 320px; width: 90%;">
-                    <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 20px; color: #dc3545;">올바르지 않은 접근입니다.</p>
-                    <p style="font-size: 0.95rem; color: #666; margin-bottom: 20px;">비밀번호 인증 후 이용해주세요.</p>
-                    <button id="auth-fail-btn" style="background-color: #3a3630; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 1rem;">메인으로 이동</button>
-                </div>
-            `;
-            
-            document.documentElement.appendChild(alertBox);
-            
-            window.addEventListener('DOMContentLoaded', () => {
-                document.getElementById('auth-fail-btn').onclick = () => {
-                    // 🌟 404 에러 방지 핵심: login.html이 아닌 대문 주소(index.html)로 강제 송환!
-                    window.location.href = 'index.html';
-                };
-            });
-            
-            const style = document.createElement('style');
-            style.innerHTML = 'body { display: none !important; }';
-            document.head.appendChild(style);
-        }
-    })();
-</script>
+    <!-- 🌟 강력한 자동 로그인 및 0506 패스 마스터 가드 -->
+    <script>
+        (function() {
+            // 1. 전체 회원 로그인 상태 체크
+            const sessionUserData = localStorage.getItem('loggedInUser');
+            if (!sessionUserData) {
+                // 비회원은 경고 팝업 없이 '즉시' 대문 로그인 화면으로 추방
+                window.location.href = 'index.html';
+                forceHideBody();
+                return;
+            }
+
+            // 2. 글쓰기 전용 0506 비밀번호 인증 상태 체크 (localStorage로 변경하여 영구 유지)
+            const isAuth = localStorage.getItem('adminAuthenticated');
+            if (isAuth !== 'true') {
+                // 아카이브 메인에서 0506 모달을 거치지 않고 주소창으로 직접 치고 들어온 경우 아카이브로 튕김
+                window.location.href = 'archive.html';
+                forceHideBody();
+            }
+
+            function forceHideBody() {
+                const style = document.createElement('style');
+                style.innerHTML = 'body { display: none !important; }';
+                document.head.appendChild(style);
+            }
+        })();
+    </script>
 </head>
 <body>
     <header class="write-header">
