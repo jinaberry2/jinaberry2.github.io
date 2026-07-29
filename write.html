@@ -7,9 +7,47 @@
     <link rel="stylesheet" href="write.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="icon" type="image/x-icon" href="/favicon_io/favicon.ico">
-<link rel="icon" type="image/png" href="/favicon_io/favicon-32x32.png" sizes="32x32">
-<link rel="icon" type="image/png" href="/favicon_io/favicon-16x16.png" sizes="16x16">
-<link rel="apple-touch-icon" href="/favicon_io/apple-touch-icon.png" sizes="180x180">
+    <link rel="icon" type="image/png" href="/favicon_io/favicon-32x32.png" sizes="32x32">
+    <link rel="icon" type="image/png" href="/favicon_io/favicon-16x16.png" sizes="16x16">
+    <link rel="apple-touch-icon" href="/favicon_io/apple-touch-icon.png" sizes="180x180">
+    
+    <!-- 🌟 [보안 인증 스크립트] 비정상적 주소 입력 접근 시 화면이 그려지기 전에 즉시 차단 -->
+    <script>
+        (function() {
+            const isAuth = sessionStorage.getItem('adminAuthenticated');
+            if (isAuth !== 'true') {
+                // 커스텀 알림 창을 띄우기 위해 최상단 HTML 도큐먼트에 직접 요소 추가
+                const alertBox = document.createElement('div');
+                alertBox.style.cssText = `
+                    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                    background-color: rgba(0, 0, 0, 0.85); z-index: 99999;
+                    display: flex; align-items: center; justify-content: center;
+                    font-family: sans-serif;
+                `;
+                alertBox.innerHTML = `
+                    <div style="background-color: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); text-align: center; max-width: 320px; width: 90%;">
+                        <p style="font-size: 1.1rem; font-weight: bold; margin-bottom: 20px; color: #dc3545;">올바르지 않은 접근입니다.</p>
+                        <p style="font-size: 0.95rem; color: #666; margin-bottom: 20px;">비밀번호 인증 후 이용해주세요.</p>
+                        <button id="auth-fail-btn" style="background-color: #007bff; color: white; font-weight: bold; padding: 10px 20px; border: none; border-radius: 6px; cursor: pointer; width: 100%; font-size: 1rem;">메인으로 이동</button>
+                    </div>
+                `;
+                
+                document.documentElement.appendChild(alertBox);
+                
+                // 도큐먼트 로드가 끝나면 버튼 이벤트 바인딩 및 메인 강제 이동 처리
+                window.addEventListener('DOMContentLoaded', () => {
+                    document.getElementById('auth-fail-btn').onclick = () => {
+                        window.location.href = 'index.html';
+                    };
+                });
+                
+                // 화면 깜빡임으로 에디터가 노출되지 않도록 body 전체 숨김 스타일 임시 주입
+                const style = document.createElement('style');
+                style.innerHTML = 'body { display: none !important; }';
+                document.head.appendChild(style);
+            }
+        })();
+    </script>
 </head>
 <body>
     <header class="write-header">
@@ -17,7 +55,6 @@
         <div class="header-right">
             <span id="word-count" class="word-count">0자</span>
             <div class="header-buttons">
-                
                 <button id="publish-btn" class="publish-btn">발행</button>
             </div>
         </div>
@@ -25,7 +62,6 @@
 
     <main class="write-container">
         <div class="editor-toolbar">
-           
             <div class="toolbar-left">
                 <button type="button" class="toolbar-button" data-command="undo" title="되돌리기">
                     <i class="fas fa-undo-alt"></i>
@@ -34,7 +70,6 @@
                     <i class="fas fa-redo-alt"></i>
                 </button>
                 <span class="toolbar-separator"></span>
-
             </div>
             <div class="toolbar-center">
                 <button type="button" class="toolbar-button" data-command="bold" title="굵게">
@@ -57,7 +92,6 @@
                     img
                 </button>
                 <span class="toolbar-separator"></span>
-
                 <button type="button" class="toolbar-button" data-command="insertUnorderedList" title="글머리 기호">
                     •
                 </button>
@@ -69,7 +103,7 @@
                 </button>
             </div>
             <div class="toolbar-right">
-              <span class="toolbar-separator"></span>
+                <span class="toolbar-separator"></span>
                 <button type="button" class="toolbar-button" data-command="justifyLeft" title="왼쪽 정렬">
                     ◧
                 </button>
@@ -80,7 +114,6 @@
                     ◨
                 </button>
             </div>
-               
         </div>
 
         <form id="write-form">
