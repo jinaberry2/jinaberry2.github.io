@@ -99,11 +99,27 @@
             text-decoration: underline;
         }
     </style>
-    <script>
+   <script>
     (function() {
-        // 이미 로그인 성공한 기록이 캐시에 있다면 로그인창을 건너뛰고 바로 아카이브로 패스!
-        if (localStorage.getItem('loggedInUser')) {
-            window.location.href = 'archive.html';
+        const sessionUserData = localStorage.getItem('loggedInUser');
+        
+        // 🌟 단순히 존재 여부만 보지 않고, 실제로 데이터가 올바르게 차 있는지(아이디가 있는지) 엄격히 검사
+        if (sessionUserData && sessionUserData !== 'undefined' && sessionUserData !== 'null') {
+            try {
+                const user = JSON.parse(sessionUserData);
+                if (user && user.username) {
+                    // 완벽하게 정상 로그인된 상태일 때만 아카이브로 보냅니다.
+                    window.location.href = 'archive.html';
+                    forceHide();
+                    return;
+                }
+            } catch (e) {
+                // 만약 파싱 에러가 나는 찌꺼기 데이터라면 캐시를 깨끗하게 청소해 버립니다.
+                localStorage.removeItem('loggedInUser');
+            }
+        }
+        
+        function forceHide() {
             const style = document.createElement('style');
             style.innerHTML = 'body { display: none !important; }';
             document.head.appendChild(style);
