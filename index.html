@@ -99,33 +99,39 @@
             text-decoration: underline;
         }
     </style>
-   <script>
-    (function() {
-        const sessionUserData = localStorage.getItem('loggedInUser');
-        
-        // 🌟 단순히 존재 여부만 보지 않고, 실제로 데이터가 올바르게 차 있는지(아이디가 있는지) 엄격히 검사
-        if (sessionUserData && sessionUserData !== 'undefined' && sessionUserData !== 'null') {
+    
+    <!-- 🌟 무한 핑퐁 루프를 완전히 파쇄하는 강력한 유령 캐시 판독 가드 -->
+    <script>
+        (function() {
+            const rawData = localStorage.getItem('loggedInUser');
+            
+            // 데이터가 아예 없거나 깨진 유령 텍스트 문자열이 박혀있다면 
+            // 가차없이 다 밀어버리고 리다이렉트를 취소한 후 로그인 대기 모드로 멈춥니다.
+            if (!rawData || rawData === 'null' || rawData === 'undefined' || rawData === '{}' || rawData === '""') {
+                localStorage.removeItem('loggedInUser');
+                return; 
+            }
+
             try {
-                const user = JSON.parse(sessionUserData);
+                const user = JSON.parse(rawData);
+                // 객체 내부의 핵심 필드(username)까지 확실하게 차 있는 실체 데이터인 경우만 통과
                 if (user && user.username) {
-                    // 완벽하게 정상 로그인된 상태일 때만 아카이브로 보냅니다.
                     window.location.href = 'archive.html';
                     forceHide();
                     return;
                 }
             } catch (e) {
-                // 만약 파싱 에러가 나는 찌꺼기 데이터라면 캐시를 깨끗하게 청소해 버립니다.
+                // 조금이라도 에러 요소가 포착되면 리셋
                 localStorage.removeItem('loggedInUser');
             }
-        }
-        
-        function forceHide() {
-            const style = document.createElement('style');
-            style.innerHTML = 'body { display: none !important; }';
-            document.head.appendChild(style);
-        }
-    })();
-</script>
+            
+            function forceHide() {
+                const style = document.createElement('style');
+                style.innerHTML = 'body { display: none !important; }';
+                document.head.appendChild(style);
+            }
+        })();
+    </script>
 </head>
 <body>
 
@@ -164,13 +170,8 @@
             const result = await response.json();
 
             if (response.ok && result.success) {
-                // 🌟 [핵심 변경] sessionStorage 대신 localStorage에 유저 정보를 저장하여 
-                // 브라우저를 껐다 켜거나 캐시를 지우지 않는 한 로그인 상태가 영구 유지되도록 설정
+                // 검증된 완전한 유저 데이터만 스토리지에 깨끗하게 직렬화하여 저장
                 localStorage.setItem('loggedInUser', JSON.stringify(result.user));
-                
-                // 🌟 [리다이렉션 분기] 
-                // 백업해둔 파일이 아니라 새로 연동할 대시보드 창(예: archive.html 등)의 주소 명칭에 맞춰 이동 타겟을 설정해줍니다.
-                // 만약 현재 메인으로 진입하는 진입점 파일이 archive.html이라면 아래 주소를 'archive.html'로 변경하시면 됩니다.
                 window.location.href = 'archive.html'; 
             } else {
                 alert(result.message || '로그인 실패');
