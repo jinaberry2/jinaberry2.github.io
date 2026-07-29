@@ -12,32 +12,35 @@
     <link rel="apple-touch-icon" href="/favicon_io/apple-touch-icon.png" sizes="180x180">
     
     <!-- 🌟 강력한 자동 로그인 및 0506 패스 마스터 가드 -->
-    <script>
-        (function() {
-            // 1. 전체 회원 로그인 상태 체크
-            const sessionUserData = localStorage.getItem('loggedInUser');
-            if (!sessionUserData) {
-                // 비회원은 경고 팝업 없이 '즉시' 대문 로그인 화면으로 추방
-                window.location.href = 'index.html';
-                forceHideBody();
-                return;
-            }
+    <!-- 🌟 무한 루프 핑퐁을 완벽히 해결한 강력한 마스터 가드 스크립트 -->
+<script>
+    (function() {
+        // 1. [최우선 검사] 전체 회원 로그인 상태 체크
+        const sessionUserData = localStorage.getItem('loggedInUser');
+        if (!sessionUserData) {
+            // 회원 로그인이 없으면 '즉시' 로그인창(index.html)으로 추방하고 코드 완전 종료
+            window.location.href = 'index.html';
+            forceHideBody();
+            return; // 👈 2번 조건을 검사하지 못하도록 여기서 원천 차단!
+        }
 
-            // 2. 글쓰기 전용 0506 비밀번호 인증 상태 체크 (localStorage로 변경하여 영구 유지)
-            const isAuth = localStorage.getItem('adminAuthenticated');
-            if (isAuth !== 'true') {
-                // 아카이브 메인에서 0506 모달을 거치지 않고 주소창으로 직접 치고 들어온 경우 아카이브로 튕김
-                window.location.href = 'archive.html';
-                forceHideBody();
-            }
+        // 2. [회원 로그인 통과 후 검사] 글쓰기 전용 0506 비밀번호 인증 상태 체크
+        const isAuth = localStorage.getItem('adminAuthenticated');
+        if (isAuth !== 'true') {
+            // 회원 로그인은 되어있으나 0506을 뚫지 않고 주소창으로 직접 친 유저는 아카이브 메인으로 추방
+            window.location.href = 'archive.html';
+            forceHideBody();
+            return;
+        }
 
-            function forceHideBody() {
-                const style = document.createElement('style');
-                style.innerHTML = 'body { display: none !important; }';
-                document.head.appendChild(style);
-            }
-        })();
-    </script>
+        // 화면 번쩍임 철저 방어용 헬퍼 함수
+        function forceHideBody() {
+            const style = document.createElement('style');
+            style.innerHTML = 'body { display: none !important; }';
+            document.head.appendChild(style);
+        }
+    })();
+</script>
 </head>
 <body>
     <header class="write-header">
